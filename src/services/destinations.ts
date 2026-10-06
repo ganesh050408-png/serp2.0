@@ -1,11 +1,21 @@
-export interface DestinationInfo {
+export type DestinationSource = 'local' | 'live';
+
+export interface DestinationSummary {
+  id?: string;
+  name?: string;
   city: string;
   country: string;
   region: string;
-  image: string;
-  secondaryImage?: string;
+  formattedAddress?: string;
+  placeId?: string;
   lat: number;
   lng: number;
+  source?: DestinationSource;
+}
+
+export interface DestinationInfo extends DestinationSummary {
+  image: string;
+  secondaryImage?: string;
   xPercent: number; // for custom map visualizations
   yPercent: number;
   attractions: string[];
@@ -14,6 +24,9 @@ export interface DestinationInfo {
   styles: string[];
   budgetLevel: '$$$' | '$$' | '$';
 }
+
+type DestinationSummaryInput = DestinationSummary &
+  Partial<Pick<DestinationInfo, 'image' | 'secondaryImage' | 'xPercent' | 'yPercent' | 'attractions' | 'activities' | 'recommendedDuration' | 'styles' | 'budgetLevel'>>;
 
 export const DESTINATIONS: DestinationInfo[] = [
   {
@@ -234,25 +247,190 @@ export const DESTINATIONS: DestinationInfo[] = [
   }
 ];
 
-// Helper to search and filter cities
+export const DESTINATION_SEARCH_DEBOUNCE_MS = 400;
+
+interface DestinationSearchApiResponse {
+  results?: unknown;
+}
+
+const destinationSearchCache = new Map<string, DestinationInfo[]>();
+
+const normalizeSearchQuery = (query: string): string =>
+  query.trim().toLowerCase().replace(/\s+/g, ' ');
+
+const normalizeDestinationName = (value: string): string =>
+  value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\b(city|town|municipality)\b/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+
+const destinationsAreDuplicates = (
+  first: DestinationSummary,
+  second: DestinationSummary
+): boolean => {
+  if (first.placeId && second.placeId && first.placeId === second.placeId) return true;
+  if (first.id && second.id && first.id === second.id) return true;
+
+  const firstCity = normalizeDestinationName(first.city);
+  const secondCity = normalizeDestinationName(second.city);
+  if (!firstCity || firstCity !== secondCity) return false;
+
+  const firstCountry = normalizeDestinationName(first.country);
+  const secondCountry = normalizeDestinationName(second.country);
+  return !firstCountry || !secondCountry || firstCountry === secondCountry;
+};
+
+const DEFAULT_DESTINATION_IMAGE =
+  'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop';
+
+export const normalizeDestinationSummary = (summary: DestinationSummaryInput): DestinationInfo => {
+  const city = summary.city.trim() || summary.name?.trim() || 'Unknown destination';
+  const country = summary.country.trim();
+  const region = summary.region.trim();
+
+  return {
+    id: summary.id || `destination:${normalizeDestinationName(city)}:${normalizeDestinationName(country)}`,
+    name: summary.name || city,
+    city,
+    country,
+    region,
+    formattedAddress: summary.formattedAddress || [city, region, country].filter(Boolean).join(', '),
+    placeId: summary.placeId,
+    source: summary.source,
+    image: summary.image || DEFAULT_DESTINATION_IMAGE,
+    secondaryImage: summary.secondaryImage || DEFAULT_DESTINATION_IMAGE,
+    lat: summary.lat,
+    lng: summary.lng,
+    xPercent: summary.xPercent ?? 50,
+    yPercent: summary.yPercent ?? 50,
+    recommendedDuration: summary.recommendedDuration ?? 2,
+    styles: summary.styles || ['relaxed', 'culture', 'food'],
+    budgetLevel: summary.budgetLevel || '$$',
+    attractions: summary.attractions || [],
+    activities: summary.activities || [],
+  };
+};
+
+const localDestination = (destination: DestinationInfo): DestinationInfo =>
+  normalizeDestinationSummary({
+    ...destination,
+    id: destination.id || `local:${normalizeDestinationName(destination.city)}`,
+    formattedAddress:
+      destination.formattedAddress ||
+      [destination.city, destination.region, destination.country].filter(Boolean).join(', '),
+    source: 'local',
+  });
+
+const mergeDestinationResults = (
+  localResults: DestinationInfo[],
+  liveResults: DestinationInfo[]
+): DestinationInfo[] => {
+  const merged: DestinationInfo[] = [];
+
+  for (const candidate of [...localResults, ...liveResults]) {
+    if (merged.some((existing) => destinationsAreDuplicates(existing, candidate))) continue;
+    merged.push(candidate);
+  }
+
+  return merged;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const parseLiveDestination = (value: unknown): DestinationInfo | null => {
+  if (!isRecord(value)) return null;
+
+  const city = typeof value.city === 'string' ? value.city : typeof value.name === 'string' ? value.name : '';
+  const country = typeof value.country === 'string' ? value.country : '';
+  const region = typeof value.region === 'string' ? value.region : '';
+  const lat = typeof value.lat === 'number' ? value.lat : Number(value.lat);
+  const lng = typeof value.lng === 'number' ? value.lng : Number(value.lng);
+
+  if (!city || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  return normalizeDestinationSummary({
+    id: typeof value.id === 'string' ? value.id : undefined,
+    name: typeof value.name === 'string' ? value.name : city,
+    city,
+    country,
+    region,
+    formattedAddress: typeof value.formattedAddress === 'string' ? value.formattedAddress : undefined,
+    placeId: typeof value.placeId === 'string' ? value.placeId : undefined,
+    image: DEFAULT_DESTINATION_IMAGE,
+    lat,
+    lng,
+    source: 'live',
+  });
+};
+
+export const getCachedDestinationResults = (query: string): DestinationInfo[] | null => {
+  const cached = destinationSearchCache.get(normalizeSearchQuery(query));
+  return cached ? [...cached] : null;
+};
+
+export const clearDestinationSearchCache = (): void => {
+  destinationSearchCache.clear();
+};
+
+export const searchDestinations = async (
+  query: string,
+  signal?: AbortSignal
+): Promise<DestinationInfo[]> => {
+  const cleanQuery = query.trim();
+  const localResults = searchCities(cleanQuery);
+  const cacheKey = normalizeSearchQuery(cleanQuery);
+
+  if (cacheKey.length < 3) return localResults;
+
+  const cached = getCachedDestinationResults(cacheKey);
+  if (cached) return mergeDestinationResults(localResults, cached);
+
+  try {
+    const response = await fetch(
+      `/api/destinations/autocomplete?q=${encodeURIComponent(cleanQuery)}`,
+      { signal }
+    );
+
+    if (!response.ok) return localResults;
+
+    const payload = (await response.json().catch(() => ({}))) as DestinationSearchApiResponse;
+    const liveResults = Array.isArray(payload.results)
+      ? payload.results.map(parseLiveDestination).filter((result): result is DestinationInfo => result !== null)
+      : [];
+    const mergedResults = mergeDestinationResults(localResults, liveResults);
+    destinationSearchCache.set(cacheKey, mergedResults);
+    return mergedResults;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return localResults;
+  }
+};
+
+// Helper to search and filter curated cities synchronously.
 export const searchCities = (query: string): DestinationInfo[] => {
   if (!query) return [];
   const cleanQuery = query.toLowerCase().trim();
-  return DESTINATIONS.filter(d => 
-    d.city.toLowerCase().includes(cleanQuery) || 
-    d.region.toLowerCase().includes(cleanQuery) || 
-    d.country.toLowerCase().includes(cleanQuery)
-  );
+  return DESTINATIONS
+    .filter(d =>
+      d.city.toLowerCase().includes(cleanQuery) ||
+      d.region.toLowerCase().includes(cleanQuery) ||
+      d.country.toLowerCase().includes(cleanQuery)
+    )
+    .map(localDestination);
 };
 
 // Fallback generator for custom input cities
 export const getOrCreateDestination = (cityName: string): DestinationInfo => {
   const match = DESTINATIONS.find(d => d.city.toLowerCase() === cityName.toLowerCase().trim());
-  if (match) return match;
+  if (match) return localDestination(match);
 
   // Otherwise create a structured fallback destination
   const formattedName = cityName.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  return {
+  return normalizeDestinationSummary({
+    id: `custom:${normalizeDestinationName(formattedName)}`,
     city: formattedName,
     region: 'India',
     country: 'India',
@@ -270,6 +448,7 @@ export const getOrCreateDestination = (cityName: string): DestinationInfo => {
       { name: `Explore ${formattedName} highlights & sights`, styles: ['culture', 'relaxed'] },
       { name: `Dine on traditional local dishes in ${formattedName}`, styles: ['food'] },
       { name: `Walking street bazaar exploration`, styles: ['budget', 'culture'] }
-    ]
-  };
+    ],
+    source: 'local',
+  });
 };

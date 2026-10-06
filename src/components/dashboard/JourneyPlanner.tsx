@@ -16,9 +16,9 @@ import {
 import { travelStorage, StoredJourney, ItineraryDay } from '../../services/travelStorage';
 import { 
   DestinationInfo, 
-  searchCities, 
   getOrCreateDestination 
 } from '../../services/destinations';
+import { useDestinationSearch } from '../../hooks/useDestinationSearch';
 
 interface JourneyPlannerProps {
   onNavigate: (path: string) => void;
@@ -29,10 +29,10 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
   
   // STEP 01 State
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<DestinationInfo[]>([]);
   const [selectedDestinations, setSelectedDestinations] = useState<DestinationInfo[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { results: searchResults, isLoading: isSearchLoading } = useDestinationSearch(searchQuery);
   
   // STEP 02 State
   const [startDate, setStartDate] = useState('');
@@ -64,14 +64,7 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
     setSearchQuery(q);
-    if (q.trim()) {
-      const results = searchCities(q);
-      setSearchResults(results);
-      setShowDropdown(true);
-    } else {
-      setSearchResults([]);
-      setShowDropdown(false);
-    }
+    setShowDropdown(Boolean(q.trim()));
   };
 
   // Add a destination
@@ -456,9 +449,9 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
                     onFocus={() => { if (searchQuery) setShowDropdown(true); }}
                     className="w-full bg-warmBg border border-subtleBorder focus:border-black focus:outline-hidden rounded-full pl-11 pr-5 py-4 text-sm font-inter transition-all"
                   />
-                  {searchQuery && (
-                    <button 
-                      onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                    {searchQuery && (
+                      <button
+                       onClick={() => { setSearchQuery(''); setShowDropdown(false); }}
                       className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-mutedGray hover:text-black"
                     >
                       <X className="w-4 h-4" />
@@ -472,7 +465,7 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
                     <div className="max-h-60 overflow-y-auto divide-y divide-neutral-100">
                       {searchResults.map((dest) => (
                         <button
-                          key={dest.city}
+                          key={dest.id || `${dest.city}-${dest.country}`}
                           onClick={() => addDestination(dest)}
                           className="w-full text-left px-5 py-3.5 hover:bg-warmBg flex items-center justify-between text-sm transition-colors cursor-pointer"
                         >
@@ -490,7 +483,13 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
                       ))}
 
                       {/* If query has length but no matching default cities */}
-                      {searchResults.length === 0 && searchQuery.trim().length > 0 && (
+                       {isSearchLoading && searchResults.length === 0 && (
+                         <div className="w-full text-left px-5 py-4 text-sm text-mutedGray font-inter">
+                           Searching destinations...
+                         </div>
+                       )}
+
+                       {!isSearchLoading && searchResults.length === 0 && searchQuery.trim().length > 0 && (
                         <button
                           onClick={() => addDestination(getOrCreateDestination(searchQuery))}
                           className="w-full text-left px-5 py-4 hover:bg-warmBg flex items-center gap-2 text-sm text-black font-medium transition-colors cursor-pointer"

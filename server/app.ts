@@ -3,6 +3,7 @@ import cors, { type CorsOptions } from 'cors';
 import express, { type RequestHandler } from 'express';
 import rateLimit from 'express-rate-limit';
 import aiRouter from './routes/ai.js';
+import destinationsRouter from './routes/destinations.js';
 import healthRouter from './routes/health.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -60,6 +61,7 @@ export const createApp = () => {
 
   app.use('/api/health', healthRouter);
   app.use('/api/ai', aiRateLimiter, aiRouter);
+  app.use('/api/destinations', destinationsRouter);
 
   app.use('/api', (_req, res) => {
     res.status(404).json({
