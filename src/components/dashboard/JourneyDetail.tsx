@@ -12,7 +12,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { travelStorage, StoredJourney, ItineraryDay } from '../../services/travelStorage';
-import { DestinationInfo, getOrCreateDestination, searchCities } from '../../services/destinations';
+import { DestinationInfo, getOrCreateDestination } from '../../services/destinations';
+import { useDestinationSearch } from '../../hooks/useDestinationSearch';
 
 interface JourneyDetailProps {
   journeyId: string;
@@ -37,7 +38,7 @@ export const JourneyDetail = ({ journeyId, onNavigate }: JourneyDetailProps) => 
   
   // Search destinations inside editor
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<DestinationInfo[]>([]);
+  const { results: searchResults, isLoading: isSearchLoading } = useDestinationSearch(searchQuery);
   
   // Inline activity addition input states
   const [newActivityTexts, setNewActivityTexts] = useState<Record<number, string>>({});
@@ -262,7 +263,6 @@ export const JourneyDetail = ({ journeyId, onNavigate }: JourneyDetailProps) => 
     }
     setEditCities([...editCities, dest]);
     setSearchQuery('');
-    setSearchResults([]);
   };
 
   const handleRemoveCityFromEditList = (index: number) => {
@@ -281,13 +281,7 @@ export const JourneyDetail = ({ journeyId, onNavigate }: JourneyDetailProps) => 
   };
 
   const handleSearchEditCities = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const q = e.target.value;
-    setSearchQuery(q);
-    if (q.trim()) {
-      setSearchResults(searchCities(q));
-    } else {
-      setSearchResults([]);
-    }
+    setSearchQuery(e.target.value);
   };
 
   const toggleEditStyle = (st: string) => {
@@ -548,9 +542,9 @@ export const JourneyDetail = ({ journeyId, onNavigate }: JourneyDetailProps) => 
                 />
                 {searchQuery.trim() && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-subtleBorder rounded-xl shadow-lg z-50 divide-y divide-neutral-100 max-h-40 overflow-y-auto">
-                    {searchResults.map((dest) => (
-                      <button
-                        key={dest.city}
+                     {searchResults.map((dest) => (
+                       <button
+                         key={dest.id || `${dest.city}-${dest.country}`}
                         onClick={() => handleAddCityToEditList(dest)}
                         className="w-full text-left px-4 py-2 hover:bg-warmBg text-xs font-inter flex justify-between items-center"
                       >
@@ -558,7 +552,12 @@ export const JourneyDetail = ({ journeyId, onNavigate }: JourneyDetailProps) => 
                         <span className="text-[9px] text-mutedGray bg-neutral-50 px-1.5 py-0.5 rounded">{dest.region}</span>
                       </button>
                     ))}
-                    {searchResults.length === 0 && (
+                     {isSearchLoading && searchResults.length === 0 && (
+                       <div className="w-full text-left px-4 py-2 text-xs text-mutedGray font-inter">
+                         Searching destinations...
+                       </div>
+                     )}
+                     {!isSearchLoading && searchResults.length === 0 && (
                       <button
                         onClick={() => handleAddCityToEditList(getOrCreateDestination(searchQuery))}
                         className="w-full text-left px-4 py-2 hover:bg-warmBg text-xs font-medium text-black flex items-center gap-1.5"
