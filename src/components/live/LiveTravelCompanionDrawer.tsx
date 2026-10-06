@@ -116,12 +116,12 @@ export const LiveTravelCompanionDrawer = ({
           actions,
         },
       ]);
-    } catch (e: any) {
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           sender: 'ai',
-          text: 'I am tracking your live journey in Panaji and updating your schedule.',
+          text: error instanceof Error ? error.message : 'Aethera AI is temporarily unavailable. Please try again later.',
         },
       ]);
     } finally {

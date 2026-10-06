@@ -80,12 +80,12 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
           actionButton,
         },
       ]);
-    } catch (e: any) {
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           sender: 'ai',
-          text: 'I have updated your journey workspace with your latest request.',
+          text: error instanceof Error ? error.message : 'Aethera AI is temporarily unavailable. Please try again later.',
         },
       ]);
     } finally {
