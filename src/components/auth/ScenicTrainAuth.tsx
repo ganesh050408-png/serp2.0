@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, X, Sparkles, AlertCircle, Lock, Mail, User as UserIcon } from 'lucide-react';
 import { travelStorage } from '../../services/travelStorage';
 
@@ -7,32 +7,31 @@ interface ScenicTrainAuthProps {
   onBack: () => void;
 }
 
-const VIDEOS = [
+const SCENES = [
   {
-    id: 0,
+    id: 'golden-hour',
     title: 'GOLDEN HOUR',
     url: 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260702_081127_0992a171-d3c6-4978-8213-0ec5df8b6d63.mp4',
   },
   {
-    id: 1,
+    id: 'still-water',
     title: 'STILL WATER',
     url: 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260702_092026_dd05b805-ea0f-40b2-8c52-332b88502592.mp4',
   },
   {
-    id: 2,
+    id: 'deep-woods',
     title: 'DEEP WOODS',
     url: 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260702_081042_df7202bf-bd80-4b2b-bbc6-1f09ba2870e9.mp4',
   },
   {
-    id: 3,
+    id: 'quiet-dawn',
     title: 'QUIET DAWN',
     url: 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260702_080959_4cac5234-3573-464e-a5b7-76b94b8a7d61.mp4',
   },
 ];
 
 export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess, onBack }) => {
-  const [activeVideo, setActiveVideo] = useState(0);
-  const [isTransitioningVideo, setIsTransitioningVideo] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<number>(() => Math.floor(Math.random() * SCENES.length));
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -40,25 +39,34 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEnteringJourney, setIsEnteringJourney] = useState(false);
-  const cooldownTimerRef = useRef<number | null>(null);
-
-  const handleVideoSwitch = (index: number) => {
-    if (index === activeVideo || isTransitioningVideo) return;
-    setIsTransitioningVideo(true);
-    setActiveVideo(index);
-
-    if (cooldownTimerRef.current) {
-      clearTimeout(cooldownTimerRef.current);
-    }
-    cooldownTimerRef.current = window.setTimeout(() => {
-      setIsTransitioningVideo(false);
-    }, 1000);
-  };
 
   useEffect(() => {
+    let timeoutId: number;
+
+    const scheduleNextTransition = () => {
+      // Random delay between 5000ms and 6000ms (5–6 seconds)
+      const delay = Math.floor(Math.random() * 1000) + 5000;
+
+      timeoutId = window.setTimeout(() => {
+        setActiveVideo((current) => {
+          // Exclude the current active scene so we never select the same background twice in a row
+          const candidates = SCENES
+            .map((_, idx) => idx)
+            .filter((idx) => idx !== current);
+          const nextIndex = candidates[Math.floor(Math.random() * candidates.length)];
+          return nextIndex;
+        });
+
+        // After each background change, schedule next transition with a new random delay
+        scheduleNextTransition();
+      }, delay);
+    };
+
+    scheduleNextTransition();
+
     return () => {
-      if (cooldownTimerRef.current) {
-        clearTimeout(cooldownTimerRef.current);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     };
   }, []);
@@ -146,10 +154,10 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
           isEnteringJourney ? 'scale-105 brightness-110' : 'scale-100'
         }`}
       >
-        {VIDEOS.map((v, idx) => (
+        {SCENES.map((scene, idx) => (
           <video
-            key={v.url}
-            src={v.url}
+            key={scene.id}
+            src={scene.url}
             autoPlay
             muted
             loop
@@ -408,29 +416,17 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
           )}
         </main>
 
-        {/* Bottom Video Switcher Footer */}
+        {/* Bottom Ambient Footer */}
         <footer className="relative z-10 w-full max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-4">
-          <div className="flex items-center gap-5 overflow-x-auto no-scrollbar py-1">
-            {VIDEOS.map((vid, idx) => (
-              <button
-                key={vid.id}
-                type="button"
-                onClick={() => handleVideoSwitch(idx)}
-                className={`text-xs font-mono uppercase tracking-wider transition-all duration-300 cursor-pointer whitespace-nowrap pb-0.5 ${
-                  activeVideo === idx
-                    ? 'text-white font-bold border-b-2 border-white opacity-100'
-                    : 'text-white/50 hover:text-white/80 border-b-2 border-transparent'
-                }`}
-              >
-                0{vid.id + 1} / {vid.title}
-              </button>
-            ))}
-          </div>
-
-          <div className="hidden lg:flex items-center gap-6 text-xs text-white/60 font-mono">
+          <div className="flex items-center gap-3 text-xs text-white/60 font-mono">
             <span>Scenic Railway Voyage</span>
             <span>•</span>
             <span>Aethera Authentication Engine</span>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-xs text-white/40 font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-pulse" />
+            <span>Autonomous Ambient Journey</span>
           </div>
         </footer>
       </div>
