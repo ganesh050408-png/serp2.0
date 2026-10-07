@@ -6,6 +6,7 @@ import aiRouter from './routes/ai.js';
 import destinationsRouter from './routes/destinations.js';
 import healthRouter from './routes/health.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { handleFlightSearchRequest } from './flightApiHandler.js';
 
 const getPositiveInteger = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value);
@@ -62,6 +63,9 @@ export const createApp = () => {
   app.use('/api/health', healthRouter);
   app.use('/api/ai', aiRateLimiter, aiRouter);
   app.use('/api/destinations', destinationsRouter);
+  app.get('/api/flights/search', async (req, res) => {
+    await handleFlightSearchRequest(req, res);
+  });
 
   app.use('/api', (_req, res) => {
     res.status(404).json({

@@ -4,28 +4,22 @@ import { getOrCreateDestination, type DestinationInfo } from '../../services/des
 import { useDestinationSearch } from '../../hooks/useDestinationSearch';
 
 interface CreateJourneySectionProps {
-<<<<<<< HEAD
-  onCreateTrip?: (tripDetails: { destination: string; budget: string; travelers: string; style: string; travelType?: 'friends' | 'family' | 'solo' }) => void;
-=======
   onCreateTrip?: (tripDetails: {
     destination: string;
     destinationInfo?: DestinationInfo;
     budget: string;
     travelers: string;
     style: string;
+    travelType?: 'friends' | 'family' | 'solo';
   }) => void;
->>>>>>> origin/main
 }
 
 const POPULAR_SUGGESTIONS = ['Goa', 'Ladakh', 'Rajasthan', 'Kerala', 'Mumbai', 'Kyoto'];
 
 export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps) => {
   const [destination, setDestination] = useState('');
-<<<<<<< HEAD
   const [travelType, setTravelType] = useState<'friends' | 'family' | 'solo'>('friends');
-=======
   const [selectedDestination, setSelectedDestination] = useState<DestinationInfo | null>(null);
->>>>>>> origin/main
   const [travelers, setTravelers] = useState('2');
   const [budget, setBudget] = useState('₹50,000');
   const [travelStyle, setTravelStyle] = useState('Coastal & Heritage');
