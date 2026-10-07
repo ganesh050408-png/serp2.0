@@ -1,10 +1,11 @@
-import { defineConfig, loadEnv, Plugin } from 'vite';
+import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { handleFlightSearchRequest } from './server/flightApiHandler';
+import { createApp } from './server/app';
 
 function aetheraBackendPlugin(): Plugin {
   return {
-    name: 'aethera-flight-api-plugin',
+    name: 'aethera-backend-plugin',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         if (req.url?.startsWith('/api/flights/search')) {
@@ -13,6 +14,8 @@ function aetheraBackendPlugin(): Plugin {
         }
         next();
       });
+      const app = createApp();
+      server.middlewares.use(app);
     },
     configurePreviewServer(server) {
       server.middlewares.use(async (req, res, next) => {
@@ -22,13 +25,14 @@ function aetheraBackendPlugin(): Plugin {
         }
         next();
       });
+      const app = createApp();
+      server.middlewares.use(app);
     },
   };
 }
 
 // https://vite.dev/config/
 export default defineConfig({
-<<<<<<< HEAD
   plugins: [react(), aetheraBackendPlugin()],
   build: {
     chunkSizeWarningLimit: 10000,
@@ -41,15 +45,3 @@ export default defineConfig({
     },
   },
 });
-=======
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
-  },
-})
->>>>>>> origin/main
