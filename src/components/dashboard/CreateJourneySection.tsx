@@ -1,24 +1,42 @@
 import { useState } from 'react';
 import { Search, Users, IndianRupee, Sparkles, ArrowRight, Check } from 'lucide-react';
+import { getOrCreateDestination, type DestinationInfo } from '../../services/destinations';
+import { useDestinationSearch } from '../../hooks/useDestinationSearch';
 
 interface CreateJourneySectionProps {
+<<<<<<< HEAD
   onCreateTrip?: (tripDetails: { destination: string; budget: string; travelers: string; style: string; travelType?: 'friends' | 'family' | 'solo' }) => void;
+=======
+  onCreateTrip?: (tripDetails: {
+    destination: string;
+    destinationInfo?: DestinationInfo;
+    budget: string;
+    travelers: string;
+    style: string;
+  }) => void;
+>>>>>>> origin/main
 }
 
 const POPULAR_SUGGESTIONS = ['Goa', 'Ladakh', 'Rajasthan', 'Kerala', 'Mumbai', 'Kyoto'];
 
 export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps) => {
   const [destination, setDestination] = useState('');
+<<<<<<< HEAD
   const [travelType, setTravelType] = useState<'friends' | 'family' | 'solo'>('friends');
+=======
+  const [selectedDestination, setSelectedDestination] = useState<DestinationInfo | null>(null);
+>>>>>>> origin/main
   const [travelers, setTravelers] = useState('2');
   const [budget, setBudget] = useState('₹50,000');
   const [travelStyle, setTravelStyle] = useState('Coastal & Heritage');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { results: destinationResults, isLoading: isDestinationLoading } = useDestinationSearch(destination);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalDestination = destination.trim() || 'Goa';
+    const destinationInfo = selectedDestination || getOrCreateDestination(finalDestination);
 
     setIsSubmitting(true);
     setTimeout(() => {
@@ -27,6 +45,7 @@ export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps
       if (onCreateTrip) {
         onCreateTrip({
           destination: finalDestination,
+          destinationInfo,
           budget,
           travelers,
           style: travelStyle,
@@ -64,11 +83,39 @@ export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps
                 <input
                   type="text"
                   value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
+                  onChange={(e) => {
+                    setDestination(e.target.value);
+                    setSelectedDestination(null);
+                  }}
                   placeholder="Where do you want to go? (e.g. Goa, Ladakh, Rajasthan...)"
                   className="w-full bg-transparent text-[#000000] placeholder:text-neutral-400 font-inter text-base sm:text-lg focus:outline-none"
                 />
               </div>
+
+              {destination.trim() && !selectedDestination && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#E7E5E2] rounded-2xl shadow-lg z-20 overflow-hidden">
+                  {destinationResults.map((dest) => (
+                    <button
+                      key={dest.id || `${dest.city}-${dest.country}`}
+                      type="button"
+                      onClick={() => {
+                        setDestination(dest.city);
+                        setSelectedDestination(dest);
+                      }}
+                      className="w-full text-left px-5 py-3 hover:bg-[#FAF8F5] flex items-center justify-between text-sm transition-colors cursor-pointer"
+                    >
+                      <span className="font-medium text-black">{dest.city}</span>
+                      <span className="text-xs text-[#6F6F6F]">{dest.region}, {dest.country}</span>
+                    </button>
+                  ))}
+                  {isDestinationLoading && destinationResults.length === 0 && (
+                    <div className="px-5 py-3 text-sm text-[#6F6F6F]">Searching destinations...</div>
+                  )}
+                  {!isDestinationLoading && destinationResults.length === 0 && (
+                    <div className="px-5 py-3 text-sm text-[#6F6F6F]">No destinations found</div>
+                  )}
+                </div>
+              )}
 
               {/* Quick suggestion pills */}
               <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
@@ -77,7 +124,10 @@ export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps
                   <button
                     key={city}
                     type="button"
-                    onClick={() => setDestination(city)}
+                   onClick={() => {
+                     setDestination(city);
+                     setSelectedDestination(getOrCreateDestination(city));
+                   }}
                     className={`text-xs px-3 py-1 rounded-full border transition-all cursor-pointer ${
                       destination.toLowerCase() === city.toLowerCase()
                         ? 'bg-black text-white border-black'

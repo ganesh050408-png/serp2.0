@@ -18,6 +18,7 @@ export const AIPlannerSection = ({ onOpenPlan }: AIPlannerSectionProps) => {
     'Plan a 10-day trip through Goa and Mumbai for four people under ₹60,000.'
   );
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<null | {
     summary: string;
     highlights: string[];
@@ -29,6 +30,7 @@ export const AIPlannerSection = ({ onOpenPlan }: AIPlannerSectionProps) => {
     if (!prompt.trim() || isGenerating) return;
 
     setIsGenerating(true);
+    setGenerationError(null);
     try {
       const aiResponse = await callAetheraAI(
         [
@@ -59,17 +61,11 @@ export const AIPlannerSection = ({ onOpenPlan }: AIPlannerSectionProps) => {
           ? prompt.match(/₹[\d,]+/)?.[0] + ' optimized target'
           : '₹54,800 total estimated allocation',
       });
-    } catch {
-      setGeneratedPlan({
-        summary:
-          '10-day architectural and coastal expedition curated for 4 travelers balancing heritage villas in Old Goa with seaside stays in Anjuna and South Mumbai colonial galleries.',
-        highlights: [
-          '3 Days in Fontainhas (Latin Quarter Heritage & Bakery walks)',
-          '4 Days in North Goa (Private catamaran & coastal sunset cafes)',
-          '3 Days in South Mumbai & Bandra (Art Deco walk & Marine Drive dusk)',
-        ],
-        budgetEstimate: '₹54,800 total estimated (saving ₹5,200 under ₹60,000 cap)',
-      });
+    } catch (error) {
+      setGeneratedPlan(null);
+      setGenerationError(
+        error instanceof Error ? error.message : 'Aethera AI is temporarily unavailable. Please try again later.'
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -150,6 +146,12 @@ export const AIPlannerSection = ({ onOpenPlan }: AIPlannerSectionProps) => {
               ))}
             </div>
           </form>
+
+          {generationError && (
+            <p className="mt-8 text-sm text-[#6F6F6F] font-inter text-center" role="alert">
+              {generationError}
+            </p>
+          )}
 
           {/* Generated Result Card */}
           {generatedPlan && (

@@ -12,8 +12,16 @@ import {
   Move
 } from 'lucide-react';
 import { travelStorage, StoredJourney, ItineraryDay } from '../../services/travelStorage';
+<<<<<<< HEAD
 import { DestinationInfo } from '../../services/destinations';
 import { GlobalLocationPicker } from './GlobalLocationPicker';
+=======
+import { 
+  DestinationInfo, 
+  getOrCreateDestination 
+} from '../../services/destinations';
+import { useDestinationSearch } from '../../hooks/useDestinationSearch';
+>>>>>>> origin/main
 
 interface JourneyPlannerProps {
   onNavigate: (path: string) => void;
@@ -23,7 +31,15 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   
   // STEP 01 State
+<<<<<<< HEAD
   const [selectedDestinations, setSelectedDestinations] = useState<DestinationInfo[]>([]);
+=======
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDestinations, setSelectedDestinations] = useState<DestinationInfo[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { results: searchResults, isLoading: isSearchLoading } = useDestinationSearch(searchQuery);
+>>>>>>> origin/main
   
   // STEP 02 State
   const [startDate, setStartDate] = useState('');
@@ -43,6 +59,27 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationPhase, setGenerationPhase] = useState(0);
 
+<<<<<<< HEAD
+=======
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle Search Input Change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const q = e.target.value;
+    setSearchQuery(q);
+    setShowDropdown(Boolean(q.trim()));
+  };
+
+>>>>>>> origin/main
   // Add a destination
   const addDestination = (dest: DestinationInfo) => {
     if (selectedDestinations.some(d => d.city.toLowerCase() === dest.city.toLowerCase())) {
@@ -422,11 +459,85 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
         {/* STEP 1: CHOOSE DESTINATIONS */}
         {step === 1 && (
           <div className="space-y-8 animate-fade-rise">
+<<<<<<< HEAD
             {/* Global Cascading Location Engine: Country, State/Province/Region, City */}
             <GlobalLocationPicker
               onAddDestination={addDestination}
               existingDestinations={selectedDestinations}
             />
+=======
+            <div className="space-y-4">
+              <label htmlFor="search-cities" className="font-mono text-xs uppercase tracking-widest text-mutedGray block">
+                Where do you want to go?
+              </label>
+              
+              <div className="relative" ref={dropdownRef}>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-mutedGray" />
+                  <input
+                    id="search-cities"
+                    type="text"
+                    placeholder="Search cities, regions or countries..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={() => { if (searchQuery) setShowDropdown(true); }}
+                    className="w-full bg-warmBg border border-subtleBorder focus:border-black focus:outline-hidden rounded-full pl-11 pr-5 py-4 text-sm font-inter transition-all"
+                  />
+                    {searchQuery && (
+                      <button
+                       onClick={() => { setSearchQuery(''); setShowDropdown(false); }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-mutedGray hover:text-black"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Floating Autocomplete Dropdown */}
+                {showDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#FFFFFF] border border-subtleBorder rounded-2xl shadow-xl z-50 overflow-hidden animate-fade-rise">
+                    <div className="max-h-60 overflow-y-auto divide-y divide-neutral-100">
+                      {searchResults.map((dest) => (
+                        <button
+                          key={dest.id || `${dest.city}-${dest.country}`}
+                          onClick={() => addDestination(dest)}
+                          className="w-full text-left px-5 py-3.5 hover:bg-warmBg flex items-center justify-between text-sm transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <MapPin className="w-4 h-4 text-mutedGray" />
+                            <div>
+                              <span className="font-medium text-black">{dest.city}</span>
+                              <span className="text-xs text-mutedGray ml-2">{dest.region}, {dest.country}</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono text-mutedGray bg-neutral-100 px-2 py-0.5 rounded">
+                            {dest.recommendedDuration} Days
+                          </span>
+                        </button>
+                      ))}
+
+                      {/* If query has length but no matching default cities */}
+                       {isSearchLoading && searchResults.length === 0 && (
+                         <div className="w-full text-left px-5 py-4 text-sm text-mutedGray font-inter">
+                           Searching destinations...
+                         </div>
+                       )}
+
+                       {!isSearchLoading && searchResults.length === 0 && searchQuery.trim().length > 0 && (
+                        <button
+                          onClick={() => addDestination(getOrCreateDestination(searchQuery))}
+                          className="w-full text-left px-5 py-4 hover:bg-warmBg flex items-center gap-2 text-sm text-black font-medium transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add "{searchQuery}" as custom destination</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+>>>>>>> origin/main
 
             {/* Selected Destinations List */}
             <div className="space-y-4">

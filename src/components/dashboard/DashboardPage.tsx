@@ -86,7 +86,7 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
 
   const handleCompleteCreation = (data: any) => {
     const newId = crypto.randomUUID ? crypto.randomUUID() : `journey_${Date.now()}`;
-    const dest = getOrCreateDestination(data.destination || 'Goa');
+    const dest = data.destinationInfo || getOrCreateDestination(data.destination || 'Goa');
 
     const newJourney: StoredJourney = {
       id: newId,
@@ -277,6 +277,7 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
             onCreateTrip={(details) => {
               handleCompleteCreation({
                 destination: details.destination,
+                destinationInfo: details.destinationInfo,
                 budget: details.budget,
                 travelers: Number(details.travelers) || 2,
                 styles: [details.style],

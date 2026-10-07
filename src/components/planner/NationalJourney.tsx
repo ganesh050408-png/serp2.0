@@ -8,6 +8,8 @@ import {
   IndianRupee,
   Sparkles,
 } from 'lucide-react';
+import { getOrCreateDestination, type DestinationInfo } from '../../services/destinations';
+import { useDestinationSearch } from '../../hooks/useDestinationSearch';
 
 interface NationalJourneyProps {
   onBackToDashboard: () => void;
@@ -71,6 +73,7 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
 
   // Form State
   const [destination, setDestination] = useState<string>('');
+  const [selectedDestination, setSelectedDestination] = useState<DestinationInfo | null>(null);
   const [selectedStyles, setSelectedStyles] = useState<string[]>(['Relaxed', 'Food & Local Life']);
   const [departureDate, setDepartureDate] = useState<string>('2026-06-12');
   const [returnDate, setReturnDate] = useState<string>('2026-06-21');
@@ -83,6 +86,7 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
   // AI Generation Loading State
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generatingStage, setGeneratingStage] = useState<string>('Designing your journey...');
+  const { results: destinationResults, isLoading: isDestinationLoading } = useDestinationSearch(destination);
 
   const handleVideoSwitch = (index: number) => {
     if (index === activeVideo || isTransitioning) return;
@@ -104,6 +108,7 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
   };
 
   const handleCreateJourney = () => {
+    const destinationInfo = selectedDestination || getOrCreateDestination(destination || 'Goa');
     setIsGenerating(true);
     setGeneratingStage('Designing your journey...');
 
@@ -121,6 +126,7 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
         onCompleteJourney({
           journeyType: 'national',
           destination: destination || 'Goa',
+          destinationInfo,
           dates: { start: departureDate, end: returnDate, flexible: isFlexibleDates },
           travelers: travelersCount,
           styles: selectedStyles,
@@ -250,15 +256,19 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
             </p>
 
             {/* Large Liquid Glass Destination Input */}
-            <div className="w-full max-w-xl mt-8">
+            <div className="w-full max-w-xl mt-8 relative">
               <div className="relative flex items-center liquid-glass rounded-full px-6 h-16 shadow-2xl focus-within:ring-1 focus-within:ring-white/60 transition-all">
                 <MapPin className="w-5 h-5 text-white/70 mr-3 shrink-0" />
                 <input
                   type="text"
                   value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
+                  onChange={(e) => {
+                    setDestination(e.target.value);
+                    setSelectedDestination(null);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && destination.trim()) {
+                      if (destinationResults[0]) setSelectedDestination(destinationResults[0]);
                       setCurrentStep(2);
                     }
                   }}
@@ -269,7 +279,10 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    if (destination.trim()) setCurrentStep(2);
+                    if (destination.trim()) {
+                      if (destinationResults[0]) setSelectedDestination(destinationResults[0]);
+                      setCurrentStep(2);
+                    }
                   }}
                   disabled={!destination.trim()}
                   className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:hover:scale-100 cursor-pointer shrink-0 ml-2"
@@ -277,6 +290,31 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
+
+              {destination.trim() && !selectedDestination && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white text-black border border-white/20 rounded-2xl shadow-xl z-20 overflow-hidden">
+                  {destinationResults.map((dest) => (
+                    <button
+                      key={dest.id || `${dest.city}-${dest.country}`}
+                      type="button"
+                      onClick={() => {
+                        setDestination(dest.city);
+                        setSelectedDestination(dest);
+                      }}
+                      className="w-full text-left px-5 py-3 hover:bg-neutral-100 flex items-center justify-between text-sm transition-colors cursor-pointer"
+                    >
+                      <span className="font-medium">{dest.city}</span>
+                      <span className="text-xs text-neutral-500">{dest.region}, {dest.country}</span>
+                    </button>
+                  ))}
+                  {isDestinationLoading && destinationResults.length === 0 && (
+                    <div className="px-5 py-3 text-sm text-neutral-500">Searching destinations...</div>
+                  )}
+                  {!isDestinationLoading && destinationResults.length === 0 && (
+                    <div className="px-5 py-3 text-sm text-neutral-500">No destinations found</div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Suggested Destinations Pills */}
@@ -290,7 +328,8 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
                     key={place}
                     type="button"
                     onClick={() => {
-                      setDestination(place);
+                       setDestination(place);
+                       setSelectedDestination(getOrCreateDestination(place));
                       setCurrentStep(2);
                     }}
                     className="px-4 py-1.5 rounded-full liquid-glass text-xs font-inter text-white hover:bg-white hover:text-black transition-all duration-200 cursor-pointer"
