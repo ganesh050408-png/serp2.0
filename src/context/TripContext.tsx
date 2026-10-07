@@ -138,6 +138,15 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refresh();
+    const handleUpdate = () => {
+      void refresh();
+    };
+    window.addEventListener('aethera:journeys_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('aethera:journeys_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, [refresh]);
 
   // ── mutation plumbing ───────────────────────────────────────────────────

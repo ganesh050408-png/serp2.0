@@ -1,9 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { 
-  MapPin, 
   Calendar, 
   Sparkles, 
-  Plus, 
   X, 
   ChevronUp, 
   ChevronDown, 
@@ -14,11 +12,16 @@ import {
   Move
 } from 'lucide-react';
 import { travelStorage, StoredJourney, ItineraryDay } from '../../services/travelStorage';
+<<<<<<< HEAD
+import { DestinationInfo } from '../../services/destinations';
+import { GlobalLocationPicker } from './GlobalLocationPicker';
+=======
 import { 
   DestinationInfo, 
   getOrCreateDestination 
 } from '../../services/destinations';
 import { useDestinationSearch } from '../../hooks/useDestinationSearch';
+>>>>>>> origin/main
 
 interface JourneyPlannerProps {
   onNavigate: (path: string) => void;
@@ -28,16 +31,23 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   
   // STEP 01 State
+<<<<<<< HEAD
+  const [selectedDestinations, setSelectedDestinations] = useState<DestinationInfo[]>([]);
+=======
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestinations, setSelectedDestinations] = useState<DestinationInfo[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { results: searchResults, isLoading: isSearchLoading } = useDestinationSearch(searchQuery);
+>>>>>>> origin/main
   
   // STEP 02 State
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [datesDecided, setDatesDecided] = useState(false);
+  const [travelType, setTravelType] = useState<'friends' | 'family' | 'solo'>('friends');
+  const [memberNames, setMemberNames] = useState<string[]>(['You', 'Friend 1']);
+  const [newMemberInput, setNewMemberInput] = useState('');
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [budgetLabel, setBudgetLabel] = useState('₹50,000');
@@ -49,6 +59,8 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationPhase, setGenerationPhase] = useState(0);
 
+<<<<<<< HEAD
+=======
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -67,17 +79,14 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
     setShowDropdown(Boolean(q.trim()));
   };
 
+>>>>>>> origin/main
   // Add a destination
   const addDestination = (dest: DestinationInfo) => {
     if (selectedDestinations.some(d => d.city.toLowerCase() === dest.city.toLowerCase())) {
       // Avoid duplicate
-      setSearchQuery('');
-      setShowDropdown(false);
       return;
     }
     setSelectedDestinations([...selectedDestinations, dest]);
-    setSearchQuery('');
-    setShowDropdown(false);
   };
 
   // Remove a destination
@@ -275,11 +284,26 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
           finalBudgetText = `₹${Number(customBudget).toLocaleString()}`;
         }
 
+        const initialMembers = travelType === 'solo'
+          ? [{ id: 'user_you', name: 'You', role: 'owner' }]
+          : memberNames.filter(Boolean).map((name, idx) => ({
+              id: idx === 0 && name.toLowerCase() === 'you' ? 'user_you' : `mem_${idx}_${Math.random().toString(36).substring(2, 7)}`,
+              name: name.trim(),
+              role: idx === 0 ? 'owner' : 'editor',
+            }));
+
+        if (initialMembers.length === 0) {
+          initialMembers.push({ id: 'user_you', name: 'You', role: 'owner' });
+        }
+
         const journey: StoredJourney = {
           id: journeyId,
           destination: citiesListText.toUpperCase(),
+          city: firstDest.city,
+          state: firstDest.region,
+          country: firstDest.country,
           budget: budgetLabel === 'I\'ll decide later' ? 0 : (budgetLabel === 'custom' ? Number(customBudget) : Number(budgetLabel.replace(/[^0-9]/g, ''))),
-          travelers: adults + children,
+          travelers: travelType === 'solo' ? 1 : (adults + children),
           style: selectedStyles.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' · '),
           createdAt: new Date().toISOString(),
           status: 'Planning',
@@ -287,7 +311,10 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
           startDate: datesDecided ? undefined : startDate,
           endDate: datesDecided ? undefined : endDate,
           datesDecided: datesDecided,
-          travellersBreakdown: { adults, children },
+          travelType: travelType,
+          members: initialMembers,
+          expenses: [],
+          travellersBreakdown: { adults: travelType === 'solo' ? 1 : adults, children: travelType === 'solo' ? 0 : children },
           budgetValue: {
             amount: budgetLabel === 'I\'ll decide later' ? null : (budgetLabel === 'custom' ? Number(customBudget) : Number(budgetLabel.replace(/[^0-9]/g, ''))),
             label: finalBudgetText
@@ -300,9 +327,9 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
 
         travelStorage.saveJourney(journey);
         
-        // Done, redirect
+        // Done, redirect to dashboard
         setTimeout(() => {
-          onNavigate(`/journey/${journeyId}`);
+          onNavigate('/');
         }, 600);
       }
     }, 900);
@@ -432,6 +459,13 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
         {/* STEP 1: CHOOSE DESTINATIONS */}
         {step === 1 && (
           <div className="space-y-8 animate-fade-rise">
+<<<<<<< HEAD
+            {/* Global Cascading Location Engine: Country, State/Province/Region, City */}
+            <GlobalLocationPicker
+              onAddDestination={addDestination}
+              existingDestinations={selectedDestinations}
+            />
+=======
             <div className="space-y-4">
               <label htmlFor="search-cities" className="font-mono text-xs uppercase tracking-widest text-mutedGray block">
                 Where do you want to go?
@@ -503,6 +537,7 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
                 )}
               </div>
             </div>
+>>>>>>> origin/main
 
             {/* Selected Destinations List */}
             <div className="space-y-4">
@@ -700,6 +735,172 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
                 <p className="text-xs text-red-500 font-mono mt-1">
                   * End date cannot be before start date.
                 </p>
+              )}
+            </div>
+
+            {/* Travel Type: Who are you travelling with? */}
+            <div className="space-y-4">
+              <label className="font-mono text-xs uppercase tracking-widest text-mutedGray block">
+                Who are you travelling with?
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Option 1: Friends */}
+                <div
+                  onClick={() => {
+                    setTravelType('friends');
+                    if (memberNames.length === 1 && memberNames[0] === 'You') {
+                      setMemberNames(['You', 'Friend 1']);
+                    }
+                  }}
+                  className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    travelType === 'friends'
+                      ? 'border-black bg-[#FAF8F5] shadow-xs ring-1 ring-black/10'
+                      : 'border-subtleBorder bg-warmBg hover:border-black/40'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-[#E7E5E2] flex items-center justify-center text-xl shadow-xs">
+                        👥
+                      </div>
+                      {travelType === 'friends' && (
+                        <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-xs">
+                          <Check className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-instrument text-xl text-black font-medium mb-1">Friends</h4>
+                    <p className="text-xs text-mutedGray font-inter leading-relaxed">
+                      Split expenses with friends and easily track who owes whom.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Option 2: Family */}
+                <div
+                  onClick={() => {
+                    setTravelType('family');
+                    if (memberNames.length === 1 && memberNames[0] === 'You') {
+                      setMemberNames(['You', 'Family Member']);
+                    }
+                  }}
+                  className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    travelType === 'family'
+                      ? 'border-black bg-[#FAF8F5] shadow-xs ring-1 ring-black/10'
+                      : 'border-subtleBorder bg-warmBg hover:border-black/40'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-[#E7E5E2] flex items-center justify-center text-xl shadow-xs">
+                        👨‍👩‍👧‍👦
+                      </div>
+                      {travelType === 'family' && (
+                        <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-xs">
+                          <Check className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-instrument text-xl text-black font-medium mb-1">Family</h4>
+                    <p className="text-xs text-mutedGray font-inter leading-relaxed">
+                      Plan family expenses and keep track of who paid and shared costs.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Option 3: Solo */}
+                <div
+                  onClick={() => {
+                    setTravelType('solo');
+                    setMemberNames(['You']);
+                    setAdults(1);
+                    setChildren(0);
+                  }}
+                  className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    travelType === 'solo'
+                      ? 'border-black bg-[#FAF8F5] shadow-xs ring-1 ring-black/10'
+                      : 'border-subtleBorder bg-warmBg hover:border-black/40'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-[#E7E5E2] flex items-center justify-center text-xl shadow-xs">
+                        👤
+                      </div>
+                      {travelType === 'solo' && (
+                        <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-xs">
+                          <Check className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-instrument text-xl text-black font-medium mb-1">Solo</h4>
+                    <p className="text-xs text-mutedGray font-inter leading-relaxed">
+                      Plan your journey without group expense splitting.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Optional companion names for Friends & Family */}
+              {travelType !== 'solo' && (
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-mono text-mutedGray">
+                      {travelType === 'friends' ? 'Trip Friends / Members' : 'Family Members'}
+                    </span>
+                    <span className="text-[11px] font-mono text-neutral-400">
+                      (You can also add or edit members anytime in budget)
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {memberNames.map((name, mIdx) => (
+                      <span
+                        key={mIdx}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-subtleBorder text-xs text-black font-inter shadow-2xs"
+                      >
+                        {name}
+                        {mIdx > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setMemberNames(memberNames.filter((_, idx) => idx !== mIdx))}
+                            className="text-neutral-400 hover:text-red-500 cursor-pointer ml-0.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                    <div className="inline-flex items-center gap-1">
+                      <input
+                        type="text"
+                        placeholder={travelType === 'friends' ? '+ Add friend name...' : '+ Add member name...'}
+                        value={newMemberInput}
+                        onChange={(e) => setNewMemberInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newMemberInput.trim()) {
+                            e.preventDefault();
+                            setMemberNames([...memberNames, newMemberInput.trim()]);
+                            setNewMemberInput('');
+                          }
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-full border border-dashed border-subtleBorder bg-transparent text-black placeholder:text-mutedGray focus:outline-hidden focus:border-black font-inter"
+                      />
+                      {newMemberInput.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMemberNames([...memberNames, newMemberInput.trim()]);
+                            setNewMemberInput('');
+                          }}
+                          className="px-2.5 py-1.5 bg-black text-white rounded-full text-xs cursor-pointer hover:bg-neutral-800"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 

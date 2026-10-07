@@ -11,10 +11,10 @@ import type {
   Collaborator,
 } from './types';
 import { type TripRepository, uid, nowISO } from './repository';
-import { buildSeedTrip, SEED_USERS, SEED_CURRENT_USER_ID } from './seed';
+import { SEED_USERS, SEED_CURRENT_USER_ID } from './seed';
+import { travelStorage } from '../travelStorage';
+import { storedJourneyToTrip, tripToStoredJourney } from './sync';
 
-// Versioned keys, namespaced away from the legacy travelStorage keys so the
-// two layers coexist during the migration.
 const K_TRIPS = 'aethera.db.trips.v1';
 const K_USERS = 'aethera.db.users.v1';
 const K_CURRENT_USER = 'aethera.db.currentUser.v1';
@@ -46,7 +46,6 @@ const writeRaw = <T>(key: string, value: T): void => {
 export class LocalTripRepository implements TripRepository {
   // ── seeding ──────────────────────────────────────────────────────────────
   private ensureSeeded(): void {
-    if (localStorage.getItem(K_TRIPS) == null) writeRaw(K_TRIPS, [buildSeedTrip()]);
     if (localStorage.getItem(K_USERS) == null) writeRaw(K_USERS, SEED_USERS);
     if (localStorage.getItem(K_CURRENT_USER) == null)
       writeRaw(K_CURRENT_USER, SEED_CURRENT_USER_ID);
@@ -54,11 +53,54 @@ export class LocalTripRepository implements TripRepository {
 
   private loadTrips(): Trip[] {
     this.ensureSeeded();
-    return readRaw<Trip[]>(K_TRIPS, []);
+    // 1. Get real user journeys from travelStorage
+    const storedJourneys = travelStorage.getJourneys();
+    const tripsFromJourneys = storedJourneys.map(storedJourneyToTrip);
+
+    // 2. Read any additional local db trips, filtering out demo/fake trips
+    const raw = readRaw<Trip[]>(K_TRIPS, []);
+    const validRaw = raw.filter(
+      (t) =>
+        t &&
+        t.id &&
+        t.id !== 'trip_demo_gmd' &&
+        t.title !== 'Goa · Mumbai · Delhi' &&
+        !t.id.startsWith('mock_')
+    );
+
+    // Merge by id (preferring tripsFromJourneys or merging fields)
+    const tripMap = new Map<string, Trip>();
+    for (const t of validRaw) {
+      tripMap.set(t.id, t);
+    }
+    for (const t of tripsFromJourneys) {
+      const existing = tripMap.get(t.id);
+      if (existing) {
+        // Keep expenses/bookings if existing in db
+        tripMap.set(t.id, {
+          ...t,
+          expenses: existing.expenses || [],
+          collaborators: existing.collaborators || t.collaborators,
+          bookings: existing.bookings || [],
+          photos: existing.photos || [],
+        });
+      } else {
+        tripMap.set(t.id, t);
+      }
+    }
+
+    const merged = Array.from(tripMap.values());
+    return merged;
   }
 
   private saveTrips(trips: Trip[]): void {
     writeRaw(K_TRIPS, trips);
+    // Also sync to travelStorage
+    for (const trip of trips) {
+      const original = travelStorage.getJourneyById(trip.id);
+      const updated = tripToStoredJourney(trip, original);
+      travelStorage.saveJourney(updated);
+    }
   }
 
   /** Find one trip, mutate a clone of it, bump updatedAt, persist, return it. */
@@ -139,27 +181,30 @@ export class LocalTripRepository implements TripRepository {
   }
 
   async deleteTrip(id: string): Promise<void> {
-    this.saveTrips(this.loadTrips().filter((t) => t.id !== id));
+    const trips = this.loadTrips().filter((t) => t.id !== id);
+    writeRaw(K_TRIPS, trips);
+    travelStorage.deleteJourney(id);
   }
 
-  // ── itinerary: days & activities ─────────────────────────────────────────
+  // ── itinerary (feature H) ────────────────────────────────────────────────
   async addDay(tripId: string, city: string): Promise<Trip> {
     return this.mutate(tripId, (t) => {
-      const dayNumber = t.days.length + 1;
+      const nextNum = t.days.length + 1;
       t.days.push({
         id: uid('day'),
-        dayNumber,
+        dayNumber: nextNum,
+        date: `Day ${nextNum}`,
         city,
-        date: `Day ${dayNumber}`,
         activities: [],
       });
+      if (!t.cities.includes(city)) t.cities.push(city);
     });
   }
 
   async addActivity(tripId: string, dayId: string, input: NewActivityInput): Promise<Trip> {
     return this.mutate(tripId, (t) => {
       const day = this.findDay(t, dayId);
-      day.activities.push({
+      const act: Activity = {
         id: uid('act'),
         title: input.title,
         type: input.type ?? 'activity',
@@ -167,7 +212,8 @@ export class LocalTripRepository implements TripRepository {
         location: input.location,
         notes: input.notes,
         orderIndex: day.activities.length,
-      });
+      };
+      day.activities.push(act);
     });
   }
 
@@ -202,14 +248,15 @@ export class LocalTripRepository implements TripRepository {
       const day = this.findDay(t, dayId);
       const byId = new Map(day.activities.map((a) => [a.id, a]));
       const next: Activity[] = [];
-      orderedActivityIds.forEach((id) => {
+      for (const id of orderedActivityIds) {
         const a = byId.get(id);
-        if (a) next.push(a);
-      });
-      // Preserve any activity not named in the ordering (defensive).
-      day.activities.forEach((a) => {
-        if (!orderedActivityIds.includes(a.id)) next.push(a);
-      });
+        if (a) {
+          next.push(a);
+          byId.delete(id);
+        }
+      }
+      // Any unmentioned activities fall to the end
+      for (const a of byId.values()) next.push(a);
       day.activities = next;
       this.reindex(day);
     });
@@ -223,19 +270,20 @@ export class LocalTripRepository implements TripRepository {
     toIndex: number,
   ): Promise<Trip> {
     return this.mutate(tripId, (t) => {
-      const from = this.findDay(t, fromDayId);
-      const to = this.findDay(t, toDayId);
-      const i = from.activities.findIndex((a) => a.id === activityId);
-      if (i === -1) throw new Error(`Activity "${activityId}" not found`);
-      const [act] = from.activities.splice(i, 1);
-      const clamped = Math.max(0, Math.min(toIndex, to.activities.length));
-      to.activities.splice(clamped, 0, act);
-      this.reindex(from);
-      this.reindex(to);
+      const fromDay = this.findDay(t, fromDayId);
+      const toDay = this.findDay(t, toDayId);
+      const actIdx = fromDay.activities.findIndex((x) => x.id === activityId);
+      if (actIdx === -1) throw new Error(`Activity "${activityId}" not in day "${fromDayId}"`);
+      const [act] = fromDay.activities.splice(actIdx, 1);
+      this.reindex(fromDay);
+
+      const targetIdx = Math.max(0, Math.min(toIndex, toDay.activities.length));
+      toDay.activities.splice(targetIdx, 0, act);
+      this.reindex(toDay);
     });
   }
 
-  // ── expenses ─────────────────────────────────────────────────────────────
+  // ── expenses (feature A) ─────────────────────────────────────────────────
   async addExpense(tripId: string, input: NewExpenseInput): Promise<Trip> {
     return this.mutate(tripId, (t) => {
       const expense: Expense = {
@@ -246,6 +294,7 @@ export class LocalTripRepository implements TripRepository {
         amount: input.amount,
         currency: input.currency ?? t.currency ?? 'INR',
         splitBetweenUserIds: input.splitBetweenUserIds,
+        customSplit: input.customSplit,
         date: input.date ?? nowISO().slice(0, 10),
         note: input.note,
       };

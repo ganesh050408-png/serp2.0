@@ -1,4 +1,4 @@
-import { DestinationInfo, getOrCreateDestination } from './destinations';
+import { DestinationInfo } from './destinations';
 
 export interface ActivityItem {
   id: string;
@@ -22,6 +22,9 @@ export interface ItineraryDay {
 export interface StoredJourney {
   id: string;
   destination: string; // Comma or dot-separated string for compatibility, e.g. "MUMBAI · GOA · JAIPUR"
+  city?: string;
+  state?: string;
+  country?: string;
   budget: number; // For compatibility
   travelers: number; // For compatibility
   style: string; // For compatibility
@@ -43,6 +46,9 @@ export interface StoredJourney {
   };
   interests?: string[];
   pace?: string;
+  travelType?: 'friends' | 'family' | 'solo';
+  members?: Array<{ id: string; name: string; role?: string }>;
+  expenses?: any[];
   itinerary?: ItineraryDay[];
   coverImage?: string;
   transportation?: StoredTransportItem[];
@@ -175,267 +181,6 @@ const normalizeJourney = (j: any): StoredJourney => {
   };
 };
 
-const RAW_SEEDED_JOURNEYS = [
-  {
-    id: '1',
-    destination: 'GOA · MUMBAI · DELHI',
-    budget: 54800,
-    travelers: 4,
-    style: 'Coastal · Heritage · Architecture',
-    createdAt: '2026-06-01T10:00:00.000Z',
-    status: 'Upcoming',
-    destinations: [
-      getOrCreateDestination('Goa'),
-      getOrCreateDestination('Mumbai'),
-      getOrCreateDestination('Delhi'),
-    ],
-    startDate: '2026-06-12',
-    endDate: '2026-06-21',
-    datesDecided: true,
-    travellersBreakdown: { adults: 4, children: 0 },
-    budgetValue: { amount: 54800, label: '₹54,800' },
-    interests: ['culture', 'food', 'relaxed', 'heritage'],
-    pace: 'balanced',
-    coverImage: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=1200&auto=format&fit=crop',
-    itinerary: [
-      {
-        dayNumber: 1,
-        date: '12 Jun',
-        city: 'Goa',
-        activities: [
-          'Arrival at Goa Airport & check-in at Panaji Heritage Villa',
-          'Evening leisurely stroll through Fontainhas Latin Quarter',
-          'Welcome seafood dinner at The Black Sheep Bistro',
-        ],
-      },
-      {
-        dayNumber: 2,
-        date: '13 Jun',
-        city: 'Goa',
-        activities: [
-          'Old Goa UNESCO churches & Basilica of Bom Jesus walk',
-          'Organic spice plantation luncheon & river cruise',
-          'Sunset drinks overlooking Miramar beach promontory',
-        ],
-      },
-      {
-        dayNumber: 3,
-        date: '14 Jun',
-        city: 'Goa',
-        activities: [
-          'Morning private catamaran charter along Baga coast',
-          'Artisan pottery workshop in Assagao village',
-          'Fort Aguada 17th-century bastion exploration & lighthouse',
-          'Anjuna cliffside dinner at sunset',
-        ],
-      },
-      {
-        dayNumber: 4,
-        date: '15 Jun',
-        city: 'Goa → Mumbai',
-        activities: [
-          'Leisurely breakfast & checkout from heritage estate',
-          'Scenic Vande Bharat coastal rail transition to Mumbai',
-          'Evening Marine Drive promenade stroll & sea view check-in',
-        ],
-      },
-      {
-        dayNumber: 5,
-        date: '16 Jun',
-        city: 'Mumbai',
-        activities: [
-          'Kala Ghoda Art precinct gallery walk & boutique shopping',
-          'Heritage architectural tour of Victoria Terminus & Fort',
-          'Contemporary dinner at Bombay Canteen, Lower Parel',
-        ],
-      },
-      {
-        dayNumber: 6,
-        date: '17 Jun',
-        city: 'Mumbai',
-        activities: [
-          'Early morning boat excursion to Elephanta Island Caves',
-          'Bandra Art Deco bungalow tour & seaside cafe lunch',
-          'Sunset cocktail reception overlooking Bandra-Worli Sea Link',
-        ],
-      },
-      {
-        dayNumber: 7,
-        date: '18 Jun',
-        city: 'Mumbai → Delhi',
-        activities: [
-          'Morning flight to New Delhi & Lutyens check-in',
-          'Afternoon garden walk at Humayun’s Tomb gardens',
-          'Traditional Mughlai dinner in Sundar Nagar',
-        ],
-      },
-      {
-        dayNumber: 8,
-        date: '19 Jun',
-        city: 'Delhi',
-        activities: [
-          'Cycle rickshaw heritage food crawl in Old Delhi & Chandni Chowk',
-          'Qutub Minar architectural park & Mehrauli ruins',
-          'Contemporary Indian dining at Indian Accent',
-        ],
-      },
-      {
-        dayNumber: 9,
-        date: '20 Jun',
-        city: 'Delhi',
-        activities: [
-          'Lodhi Art District public mural photo excursion',
-          'Handicraft and artisan shopping at Dilli Haat',
-          'Farewell banquet in Chanakyapuri diplomatic enclave',
-        ],
-      },
-      {
-        dayNumber: 10,
-        date: '21 Jun',
-        city: 'Delhi',
-        activities: [
-          'Slow morning breakfast & travel journal wrap-up',
-          'Airport departure transfers for return voyage',
-        ],
-      },
-    ],
-  },
-  {
-    id: '2',
-    destination: 'RAJASTHAN',
-    budget: 72000,
-    travelers: 3,
-    style: 'Heritage · Royal Havelis · Desert',
-    createdAt: '2026-06-05T10:00:00.000Z',
-    status: 'Planning',
-    destinations: [
-      getOrCreateDestination('Jaipur'),
-      getOrCreateDestination('Udaipur'),
-    ],
-    startDate: '2026-08-02',
-    endDate: '2026-08-11',
-    datesDecided: true,
-    travellersBreakdown: { adults: 3, children: 0 },
-    budgetValue: { amount: 72000, label: '₹72,000' },
-    interests: ['heritage', 'culture', 'photography', 'food'],
-    pace: 'balanced',
-    coverImage: 'https://images.unsplash.com/photo-1477587458883-47145ed94245?q=80&w=800&auto=format&fit=crop',
-    itinerary: [
-      {
-        dayNumber: 1,
-        date: '02 Aug',
-        city: 'Jaipur',
-        activities: [
-          'Arrival at Jaipur Pink City Haveli & rose water reception',
-          'Golden hour photo walk at Hawa Mahal facade',
-          'Rooftop dinner overlooking City Palace',
-        ],
-      },
-      {
-        dayNumber: 2,
-        date: '03 Aug',
-        city: 'Jaipur',
-        activities: [
-          'Amber Fort morning jeep ascent & Sheesh Mahal mirrored hall',
-          'Panna Meena ka Kund ancient stepwell photo study',
-          'Traditional block-printing artisan workshop in Bagru',
-        ],
-      },
-      {
-        dayNumber: 3,
-        date: '04 Aug',
-        city: 'Udaipur',
-        activities: [
-          'Scenic royal highway drive to Lake City Udaipur',
-          'Private boat cruise on Lake Pichola around Jag Mandir',
-          'Lakeside dining with illuminated palace views',
-        ],
-      },
-    ],
-  },
-  {
-    id: '3',
-    destination: 'KERALA',
-    budget: 48000,
-    travelers: 2,
-    style: 'Backwaters · Misted Tea Hills · Wellness',
-    createdAt: '2026-06-10T10:00:00.000Z',
-    status: 'Planning',
-    destinations: [getOrCreateDestination('Kerala')],
-    startDate: '2026-09-18',
-    endDate: '2026-09-25',
-    datesDecided: true,
-    travellersBreakdown: { adults: 2, children: 0 },
-    budgetValue: { amount: 48000, label: '₹48,000' },
-    interests: ['nature', 'wellness', 'relaxed', 'food'],
-    pace: 'slow',
-    coverImage: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=800&auto=format&fit=crop',
-    itinerary: [
-      {
-        dayNumber: 1,
-        date: '18 Sep',
-        city: 'Fort Kochi',
-        activities: [
-          'Check-in at Dutch colonial waterfront boutique retreat',
-          'Sunset viewing of Chinese Fishing Nets',
-          'Authentic seafood dinner with Malabar spices',
-        ],
-      },
-      {
-        dayNumber: 2,
-        date: '19 Sep',
-        city: 'Alleppey',
-        activities: [
-          'Boarding private luxury teakwood houseboat in Alleppey',
-          'Slow cruise through palm-shaded canals and paddy fields',
-          'Ayurvedic herbal massage and herbal oil treatments',
-        ],
-      },
-    ],
-  },
-  {
-    id: '4',
-    destination: 'LADAKH',
-    budget: 65000,
-    travelers: 2,
-    style: 'High-Altitude Monasteries · Glacial Valleys',
-    createdAt: '2026-06-15T10:00:00.000Z',
-    status: 'Planning',
-    destinations: [getOrCreateDestination('Srinagar')],
-    startDate: '2026-10-05',
-    endDate: '2026-10-14',
-    datesDecided: true,
-    travellersBreakdown: { adults: 2, children: 0 },
-    budgetValue: { amount: 65000, label: '₹65,000' },
-    interests: ['nature', 'adventure', 'photography', 'culture'],
-    pace: 'slow',
-    coverImage: 'https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?q=80&w=800&auto=format&fit=crop',
-    itinerary: [
-      {
-        dayNumber: 1,
-        date: '05 Oct',
-        city: 'Leh',
-        activities: [
-          'Arrival at Leh Airport (11,500 ft) & gentle acclimation rest',
-          'Slow evening herbal tea and sunset at Shanti Stupa',
-        ],
-      },
-      {
-        dayNumber: 2,
-        date: '06 Oct',
-        city: 'Leh',
-        activities: [
-          'Morning prayer ceremony at Thiksey Monastery',
-          'Hemis Gompa ancient museum and sacred courtyards',
-          'Stargazing night session under high Himalayan skies',
-        ],
-      },
-    ],
-  },
-];
-
-const DEFAULT_SEEDED_JOURNEYS: StoredJourney[] = RAW_SEEDED_JOURNEYS.map(normalizeJourney);
-
 const read = <T,>(key: string, fallback: T): T => {
   try {
     const value = window.localStorage.getItem(key);
@@ -451,12 +196,19 @@ const write = <T,>(key: string, value: T) => {
 
 export const travelStorage = {
   getJourneys: (): StoredJourney[] => {
-    const journeys = read<StoredJourney[]>(JOURNEYS_KEY, []);
-    if (journeys.length === 0) {
-      write(JOURNEYS_KEY, DEFAULT_SEEDED_JOURNEYS);
-      return DEFAULT_SEEDED_JOURNEYS.map(normalizeJourney);
-    }
-    return journeys.map(normalizeJourney);
+    const raw = read<StoredJourney[]>(JOURNEYS_KEY, []);
+    // Filter out old fake/demo seeded mock journeys (e.g. mock ID '1', '2', '3', '4' or hardcoded mock 'GOA · MUMBAI · DELHI')
+    const valid = raw.filter(
+      (j) =>
+        j &&
+        j.id &&
+        j.id !== '1' &&
+        j.id !== '2' &&
+        j.id !== '3' &&
+        j.id !== '4' &&
+        j.destination !== 'GOA · MUMBAI · DELHI'
+    );
+    return valid.map(normalizeJourney);
   },
   getJourneyById: (id: string): StoredJourney | undefined => {
     const journeys = travelStorage.getJourneys();
@@ -465,17 +217,25 @@ export const travelStorage = {
   saveJourney: (journey: StoredJourney) => {
     const journeys = travelStorage.getJourneys();
     const existsIndex = journeys.findIndex((j) => j.id === journey.id);
+    let updated: StoredJourney[];
     if (existsIndex > -1) {
       journeys[existsIndex] = journey;
-      write(JOURNEYS_KEY, journeys);
+      updated = journeys;
     } else {
-      write(JOURNEYS_KEY, [journey, ...journeys]);
+      updated = [journey, ...journeys];
+    }
+    write(JOURNEYS_KEY, updated);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aethera:journeys_updated', { detail: updated }));
     }
   },
   deleteJourney: (id: string) => {
     const journeys = travelStorage.getJourneys();
     const filtered = journeys.filter((j) => j.id !== id);
     write(JOURNEYS_KEY, filtered);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aethera:journeys_updated', { detail: filtered }));
+    }
   },
   duplicateJourney: (id: string): StoredJourney | null => {
     const journeys = travelStorage.getJourneys();

@@ -51,11 +51,10 @@ export const JourneyDetail = ({ journeyId, onNavigate }: JourneyDetailProps) => 
     const list = travelStorage.getJourneys();
     let found = list.find((j) => j.id === journeyId);
 
-    // If journey isn't found in storage, automatically synthesize it from the destination or haven directory
     if (!found && journeyId) {
       const cityName = decodeURIComponent(journeyId).replace(/[-_]/g, ' ');
       const dest = getOrCreateDestination(cityName);
-      const fallbackJourney: StoredJourney = {
+      const tempJourney: StoredJourney = {
         id: journeyId,
         destination: dest.city.toUpperCase(),
         budget: 54000,
@@ -83,30 +82,9 @@ export const JourneyDetail = ({ journeyId, onNavigate }: JourneyDetailProps) => 
               `Welcome dinner featuring local ${dest.city} cuisine`,
             ],
           },
-          {
-            dayNumber: 2,
-            date: 'Day 2',
-            city: dest.city,
-            activities: [
-              `Morning guided visit to ${dest.attractions[1] || 'signature landmarks'}`,
-              `Scenic cultural & artisan craft excursion`,
-              `Sunset viewpoint & relaxation`,
-            ],
-          },
-          {
-            dayNumber: 3,
-            date: 'Day 3',
-            city: dest.city,
-            activities: [
-              `Exploration of ${dest.attractions[2] || 'surrounding natural reserves'}`,
-              `Farewell banquet & travel journal reflection`,
-            ],
-          },
         ],
       };
-
-      travelStorage.saveJourney(fallbackJourney);
-      found = fallbackJourney;
+      found = tempJourney;
     }
 
     if (found) {
