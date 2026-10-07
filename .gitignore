@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Environment Variables & Secrets (CRITICAL: Never commit secrets)
 .env
 .env.local
@@ -50,12 +49,3 @@ Thumbs.db
 *.tsbuildinfo
 .eslintcache
 
-=======
-.env
-.env.*
-!.env.example
-
-dist/
-dist-server/
-node_modules/
->>>>>>> origin/main
