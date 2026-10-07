@@ -39,8 +39,9 @@ import { NationalJourney } from '../planner/NationalJourney';
 import { InternationalJourney } from '../planner/InternationalJourney';
 
 // Storage services
-import { travelStorage, StoredJourney } from '../../services/travelStorage';
+import { StoredJourney } from '../../services/travelStorage';
 import { getOrCreateDestination } from '../../services/destinations';
+import { useJourneys } from '../../context/useJourneys';
 
 interface DashboardPageProps {
   onGoToLanding: () => void;
@@ -48,6 +49,8 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps) => {
+  const { journeys, activeJourney, saveJourney } = useJourneys();
+
   // Mode state: 'planning' (before trip) or 'live' (active in-destination companion)
   const [tripMode, setTripMode] = useState<'planning' | 'live'>('planning');
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -104,6 +107,12 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
       },
       interests: data.styles || ['culture', 'relaxed'],
       pace: 'balanced',
+      travelType: data.travelType || 'friends',
+      members: data.members || [
+        { id: 'user_you', name: 'You', role: 'owner' },
+        { id: 'user_comp1', name: data.travelType === 'family' ? 'Family Member' : 'Friend 1', role: 'editor' },
+      ],
+      expenses: [],
       coverImage: dest.image,
       itinerary: [
         {
@@ -138,9 +147,9 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
       ],
     };
 
-    travelStorage.saveJourney(newJourney);
+    saveJourney(newJourney);
     setActivePlanningJourney(null);
-    onNavigate(`/journey/${newId}`);
+    onNavigate('/');
   };
 
   // If user is currently in a fullscreen National or International journey planning flow:
@@ -236,21 +245,32 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
         <div className="animate-fade-rise">
           {/* 4. Dashboard Hero Greeting with Train Hover Animation and Direct Planner Navigation */}
           <DashboardHero
-            onPlanNew={() => onNavigate('/plan')}
+            onPlanNew={() => onNavigate('/planner/new')}
             onExplore={() => scrollToSection('discovery')}
             onOpenTrain={() => onNavigate('/train')}
           />
 
           {/* 6 & 7. Current Journey Cinematic Card + Minimal Trip Status */}
           <CurrentJourneyCard
-            onContinueJourney={() => setTripMode('live')}
+            journey={activeJourney}
+            onSelectJourney={handleSelectJourney}
+            onPlanNew={() => onNavigate('/planner/new')}
+            onContinueJourney={() => {
+              if (activeJourney) {
+                handleSelectJourney(activeJourney.id);
+              }
+            }}
           />
 
-          {/* Editable, reorderable itinerary — drag to plan (feature H) */}
-          <ItineraryBoard />
+          {/* Editable, reorderable itinerary — drag to plan ("Shape every day.") */}
+          <ItineraryBoard journey={activeJourney} onPlanNew={() => onNavigate('/planner/new')} />
 
           {/* 8. My Journeys Editorial Collection */}
-          <MyJourneysSection onSelectJourney={handleSelectJourney} />
+          <MyJourneysSection
+            journeys={journeys}
+            onSelectJourney={handleSelectJourney}
+            onPlanNew={() => onNavigate('/planner/new')}
+          />
 
           {/* 9. Create Journey Section ("Dream somewhere new") */}
           <CreateJourneySection
@@ -268,7 +288,7 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
           <AIPlannerSection />
 
           {/* 11. Upcoming Itinerary */}
-          <UpcomingItinerary onOpenJourney={handleSelectJourney} />
+          <UpcomingItinerary journey={activeJourney} onOpenJourney={handleSelectJourney} />
 
           {/* 12. Travel Budget (Monochrome & Editorial) */}
           <TravelBudget />
@@ -281,6 +301,8 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
 
           {/* 13. Interactive Journey Map */}
           <JourneyMap
+            journey={activeJourney}
+            journeys={journeys}
             onSelectCity={(city, journeyId) => {
               if (journeyId) {
                 onNavigate(`/journey/${journeyId}`);
@@ -289,10 +311,13 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
               }
             }}
             onOpenLiveMap={() => setTripMode('live')}
+            onPlanNew={() => onNavigate('/planner/new')}
           />
 
           {/* Transportation Studio (Decision Screen + Bike & Flight Booking Flows) */}
           <TransportationStudio
+            currentJourney={activeJourney}
+            journeys={journeys}
             onOpenTrainExperience={() => onNavigate('/train')}
             onNavigate={onNavigate}
           />

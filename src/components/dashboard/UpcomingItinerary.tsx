@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArrowRight, MapPin, CheckCircle, Plus } from 'lucide-react';
 import { AddItineraryStopModal } from './AddItineraryStopModal';
+import { StoredJourney } from '../../services/travelStorage';
 
 interface ItineraryEvent {
   time: string;
@@ -12,69 +13,62 @@ interface ItineraryEvent {
 }
 
 interface UpcomingItineraryProps {
+  journey?: StoredJourney | null;
   onOpenJourney?: (id: string) => void;
 }
 
-const ITINERARY_EVENTS: ItineraryEvent[] = [
-  {
-    time: '09:00',
-    title: 'Breakfast & Traditional Pastries',
-    location: 'Confeitaria 31 de Janeiro, Fontainhas',
-    category: 'Dining',
-    completed: true,
-    notes: 'Try warm Bebinca and artisanal pour-over coffee.',
-  },
-  {
-    time: '10:30',
-    title: 'Baga Beach Coastal Walk & Catamaran',
-    location: 'North Baga Shoreline',
-    category: 'Activity',
-    completed: false,
-    notes: 'Charter skipper confirmed at Jetty 4.',
-  },
-  {
-    time: '13:00',
-    title: 'Coastal Seafood Lunch',
-    location: "Fisherman's Wharf, Sal River",
-    category: 'Dining',
-    completed: false,
-    notes: 'Reserved outdoor table with waterfront view.',
-  },
-  {
-    time: '15:30',
-    title: 'Fort Aguada & 17th-Century Lighthouse',
-    location: 'Sinquerim Promontory',
-    category: 'Heritage',
-    completed: false,
-    notes: 'Architectural walk through the Portuguese bastion.',
-  },
-  {
-    time: '18:30',
-    title: 'Anjuna Sunset & Ambient Sounds',
-    location: 'Curlys Cliff / Sunset Point',
-    category: 'Leisure',
-    completed: false,
-    notes: 'Tide optimal for photography.',
-  },
-];
+export const UpcomingItinerary = ({ journey, onOpenJourney }: UpcomingItineraryProps) => {
+  if (!journey || !journey.itinerary || journey.itinerary.length === 0) {
+    return null;
+  }
 
-export const UpcomingItinerary = ({ onOpenJourney }: UpcomingItineraryProps) => {
-  const [selectedDay, setSelectedDay] = useState('14 JUN');
-  const [events, setEvents] = useState(ITINERARY_EVENTS);
+  const daysList = useMemo(() => {
+    return journey.itinerary?.map((d) => d.date) || [];
+  }, [journey]);
+
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [customStops, setCustomStops] = useState<Record<number, ItineraryEvent[]>>({});
+  const [completedItems, setCompletedItems] = useState<Record<string, boolean>>({});
   const [isAddStopOpen, setIsAddStopOpen] = useState(false);
 
-  const toggleEvent = (index: number) => {
-    const updated = [...events];
-    updated[index].completed = !updated[index].completed;
-    setEvents(updated);
+  const currentDayData = journey.itinerary[selectedDayIndex] || journey.itinerary[0];
+
+  // Convert day's activities string list into structured timeline events
+  const defaultEvents: ItineraryEvent[] = useMemo(() => {
+    if (!currentDayData) return [];
+    return (currentDayData.activities || []).map((act, idx) => {
+      const actStr = typeof act === 'string' ? act : act.name || 'Scheduled Activity';
+      const times = ['09:00', '11:30', '14:00', '17:30', '20:00'];
+      const categories = ['Arrival', 'Culture', 'Dining', 'Heritage', 'Leisure'];
+      return {
+        time: times[idx % times.length],
+        title: actStr,
+        location: currentDayData.city,
+        category: categories[idx % categories.length],
+        completed: false,
+      };
+    });
+  }, [currentDayData]);
+
+  const dayCustomStops = customStops[selectedDayIndex] || [];
+  const allEvents = [...defaultEvents, ...dayCustomStops];
+
+  const toggleEvent = (eventKey: string) => {
+    setCompletedItems((prev) => ({
+      ...prev,
+      [eventKey]: !prev[eventKey],
+    }));
   };
 
   const handleAddStop = (newEvent: { time: string; title: string; location: string; category: string; notes?: string }) => {
-    setEvents([...events, { ...newEvent, completed: false }]);
+    setCustomStops((prev) => ({
+      ...prev,
+      [selectedDayIndex]: [...(prev[selectedDayIndex] || []), { ...newEvent, completed: false }],
+    }));
   };
 
   return (
-    <section id="itinerary" className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 py-20 border-t border-[#E7E5E2]">
+    <section id="itinerary" className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 py-20 border-t border-[#E7E5E2] animate-fade-rise">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
         {/* Left Column: Heading & Date Picker */}
         <div className="lg:col-span-5 flex flex-col justify-between">
@@ -86,33 +80,39 @@ export const UpcomingItinerary = ({ onOpenJourney }: UpcomingItineraryProps) => 
               What's next
             </h2>
             <p className="font-inter text-sm sm:text-base text-[#6F6F6F] mt-4 leading-relaxed max-w-md">
-              A chronological flow of your day. Designed for unhurried exploration and spontaneous
-              detours.
+              A chronological flow of your day in <strong>{currentDayData?.city}</strong>. Designed for unhurried exploration and spontaneous detours.
             </p>
 
             {/* Date Segment Selector */}
-            <div className="flex items-center gap-2 mt-8 overflow-x-auto pb-2">
-              {['12 JUN', '13 JUN', '14 JUN', '15 JUN', '16 JUN'].map((day) => (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDay(day)}
-                  className={`px-4 py-2 rounded-full text-xs font-mono transition-all cursor-pointer whitespace-nowrap ${
-                    selectedDay === day
-                      ? 'bg-[#000000] text-white shadow-xs'
-                      : 'bg-neutral-100 text-[#6F6F6F] hover:text-[#000000]'
-                  }`}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
+            {daysList.length > 0 && (
+              <div className="flex items-center gap-2 mt-8 overflow-x-auto pb-2">
+                {daysList.map((day, idx) => (
+                  <button
+                    key={day + idx}
+                    type="button"
+                    onClick={() => setSelectedDayIndex(idx)}
+                    className={`px-4 py-2 rounded-full text-xs font-mono transition-all cursor-pointer whitespace-nowrap ${
+                      selectedDayIndex === idx
+                        ? 'bg-[#000000] text-white shadow-xs'
+                        : 'bg-neutral-100 text-[#6F6F6F] hover:text-[#000000]'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Day Overview Badge */}
             <div className="mt-8 p-6 bg-[#FAF8F5] border border-[#E7E5E2] rounded-2xl">
-              <span className="text-[11px] font-mono uppercase text-[#6F6F6F] block">Day 3 of 10</span>
-              <h3 className="font-instrument text-3xl text-[#000000] mt-1">Goa · Coastal Heritage</h3>
+              <span className="text-[11px] font-mono uppercase text-[#6F6F6F] block">
+                Day {selectedDayIndex + 1} of {daysList.length}
+              </span>
+              <h3 className="font-instrument text-3xl text-[#000000] mt-1">
+                {currentDayData?.city} · {journey.style || 'Custom Exploration'}
+              </h3>
               <p className="text-xs text-[#6F6F6F] mt-2 font-inter">
-                {events.length} scheduled moments · 2 dining reservations · Estimated travel time 1 hr 20 min
+                {allEvents.length} scheduled moments · Personalized itinerary
               </p>
             </div>
           </div>
@@ -120,10 +120,10 @@ export const UpcomingItinerary = ({ onOpenJourney }: UpcomingItineraryProps) => 
           <div className="pt-8">
             <button
               type="button"
-              onClick={() => onOpenJourney && onOpenJourney('1')}
+              onClick={() => onOpenJourney && onOpenJourney(journey.id)}
               className="inline-flex items-center gap-2 text-sm font-medium text-[#000000] hover:text-[#6F6F6F] transition-colors group cursor-pointer"
             >
-              <span>Open full 10-day itinerary</span>
+              <span>Open full {daysList.length}-day itinerary</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
@@ -132,58 +132,64 @@ export const UpcomingItinerary = ({ onOpenJourney }: UpcomingItineraryProps) => 
         {/* Right Column: Clean Editorial Vertical Timeline */}
         <div className="lg:col-span-7">
           <div className="relative pl-6 sm:pl-8 border-l border-[#E7E5E2] space-y-10">
-            {events.map((event, idx) => (
-              <div key={idx} className="relative group">
-                {/* Timeline node dot */}
-                <button
-                  onClick={() => toggleEvent(idx)}
-                  className={`absolute -left-[31px] sm:-left-[39px] top-1.5 w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center cursor-pointer ${
-                    event.completed
-                      ? 'bg-[#000000] border-[#000000] text-white'
-                      : 'bg-white border-neutral-400 group-hover:border-black'
-                  }`}
-                  title="Click to toggle completed status"
-                >
-                  {event.completed && <CheckCircle className="w-3.5 h-3.5" />}
-                </button>
+            {allEvents.map((event, idx) => {
+              const eventKey = `${selectedDayIndex}_${idx}_${event.title}`;
+              const isCompleted = !!completedItems[eventKey];
 
-                {/* Event Header: Time and Category */}
-                <div className="flex items-center justify-between gap-4 mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-semibold tracking-wider text-[#000000]">
-                      {event.time}
-                    </span>
-                    <span className="text-neutral-300">•</span>
-                    <span className="text-[11px] font-mono uppercase text-[#6F6F6F] bg-neutral-100 px-2 py-0.5 rounded">
-                      {event.category}
-                    </span>
+              return (
+                <div key={eventKey} className="relative group">
+                  {/* Timeline node dot */}
+                  <button
+                    type="button"
+                    onClick={() => toggleEvent(eventKey)}
+                    className={`absolute -left-[31px] sm:-left-[39px] top-1.5 w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center cursor-pointer ${
+                      isCompleted
+                        ? 'bg-[#000000] border-[#000000] text-white'
+                        : 'bg-white border-neutral-400 group-hover:border-black'
+                    }`}
+                    title="Click to toggle completed status"
+                  >
+                    {isCompleted && <CheckCircle className="w-3.5 h-3.5" />}
+                  </button>
+
+                  {/* Event Header: Time and Category */}
+                  <div className="flex items-center justify-between gap-4 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-semibold tracking-wider text-[#000000]">
+                        {event.time}
+                      </span>
+                      <span className="text-neutral-300">•</span>
+                      <span className="text-[11px] font-mono uppercase text-[#6F6F6F] bg-neutral-100 px-2 py-0.5 rounded">
+                        {event.category}
+                      </span>
+                    </div>
+                    {isCompleted && (
+                      <span className="text-[11px] text-emerald-700 font-mono">Done</span>
+                    )}
                   </div>
-                  {event.completed && (
-                    <span className="text-[11px] text-emerald-700 font-mono">Done</span>
+
+                  {/* Event Details */}
+                  <h4
+                    className={`font-instrument text-2xl text-[#000000] transition-opacity ${
+                      isCompleted ? 'opacity-50 line-through' : ''
+                    }`}
+                  >
+                    {event.title}
+                  </h4>
+
+                  <div className="flex items-center gap-1.5 text-xs text-[#6F6F6F] mt-1 font-inter">
+                    <MapPin className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
+                    <span>{event.location}</span>
+                  </div>
+
+                  {event.notes && (
+                    <p className="text-xs text-[#6F6F6F] mt-2 italic font-inter pl-3 border-l border-neutral-200">
+                      "{event.notes}"
+                    </p>
                   )}
                 </div>
-
-                {/* Event Details */}
-                <h4
-                  className={`font-instrument text-2xl text-[#000000] transition-opacity ${
-                    event.completed ? 'opacity-50 line-through' : ''
-                  }`}
-                >
-                  {event.title}
-                </h4>
-
-                <div className="flex items-center gap-1.5 text-xs text-[#6F6F6F] mt-1 font-inter">
-                  <MapPin className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
-                  <span>{event.location}</span>
-                </div>
-
-                {event.notes && (
-                  <p className="text-xs text-[#6F6F6F] mt-2 italic font-inter pl-3 border-l border-neutral-200">
-                    "{event.notes}"
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             {/* Quick Add Moment */}
             <div className="pt-2">
@@ -193,7 +199,7 @@ export const UpcomingItinerary = ({ onOpenJourney }: UpcomingItineraryProps) => 
                 className="flex items-center gap-2 text-xs font-medium text-[#6F6F6F] hover:text-[#000000] px-3 py-2 rounded-full border border-dashed border-[#E7E5E2] hover:border-black transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add custom stop to {selectedDay}</span>
+                <span>Add custom stop to {daysList[selectedDayIndex] || 'selected day'}</span>
               </button>
             </div>
           </div>
@@ -204,7 +210,7 @@ export const UpcomingItinerary = ({ onOpenJourney }: UpcomingItineraryProps) => 
       <AddItineraryStopModal
         isOpen={isAddStopOpen}
         onClose={() => setIsAddStopOpen(false)}
-        dayLabel={selectedDay}
+        dayLabel={daysList[selectedDayIndex] || 'Day 1'}
         onAddEvent={handleAddStop}
       />
     </section>

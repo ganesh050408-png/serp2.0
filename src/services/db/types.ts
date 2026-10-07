@@ -104,6 +104,8 @@ export interface Expense {
   currency: string;
   /** User ids the cost is split evenly across. Empty === "just me". */
   splitBetweenUserIds: string[];
+  /** Optional custom amounts per participant for unequal/family splits. */
+  customSplit?: Record<string, number>;
   date: string;
   note?: string;
 }
@@ -146,6 +148,8 @@ export interface Trip {
   endDate?: string;
   coverImage?: string;
   status: TripStatus;
+  travelType?: 'friends' | 'family' | 'solo';
+  members?: Array<{ id: string; name: string; role?: string }>;
   currency: string;
   budgetTarget?: number | null;
   createdAt: string;
@@ -182,6 +186,8 @@ export interface NewTripInput {
   endDate?: string;
   coverImage?: string;
   status?: TripStatus;
+  travelType?: 'friends' | 'family' | 'solo';
+  members?: Array<{ id: string; name: string; role?: string }>;
   currency?: string;
   budgetTarget?: number | null;
   days?: TripDay[];
@@ -202,6 +208,8 @@ export interface NewExpenseInput {
   amount: number;
   currency?: string;
   splitBetweenUserIds: string[];
+  customSplit?: Record<string, number>;
   date?: string;
   note?: string;
 }
+

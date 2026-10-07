@@ -29,12 +29,18 @@ export function computeBalances(expenses: Expense[]): Record<string, number> {
   };
 
   for (const e of expenses) {
-    // "Just me" (empty split) is a personal cost — nets to zero, skip.
-    const members = e.splitBetweenUserIds.length > 0 ? e.splitBetweenUserIds : [e.paidByUserId];
-    if (members.length === 0) continue;
-    const share = e.amount / members.length;
     bump(e.paidByUserId, e.amount); // payer fronted the whole cost
-    members.forEach((m) => bump(m, -share)); // each member owes their share
+    if (e.customSplit && Object.keys(e.customSplit).length > 0) {
+      for (const [m, customAmt] of Object.entries(e.customSplit)) {
+        bump(m, -customAmt);
+      }
+    } else {
+      // "Just me" (empty split) is a personal cost — nets to zero, skip.
+      const members = e.splitBetweenUserIds.length > 0 ? e.splitBetweenUserIds : [e.paidByUserId];
+      if (members.length === 0) continue;
+      const share = e.amount / members.length;
+      members.forEach((m) => bump(m, -share)); // each member owes their share
+    }
   }
 
   // Round and drop dust so tiny residuals don't create phantom debts.

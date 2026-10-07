@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Search, Users, IndianRupee, Sparkles, ArrowRight, Check } from 'lucide-react';
 
 interface CreateJourneySectionProps {
-  onCreateTrip?: (tripDetails: { destination: string; budget: string; travelers: string; style: string }) => void;
+  onCreateTrip?: (tripDetails: { destination: string; budget: string; travelers: string; style: string; travelType?: 'friends' | 'family' | 'solo' }) => void;
 }
 
 const POPULAR_SUGGESTIONS = ['Goa', 'Ladakh', 'Rajasthan', 'Kerala', 'Mumbai', 'Kyoto'];
 
 export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps) => {
   const [destination, setDestination] = useState('');
+  const [travelType, setTravelType] = useState<'friends' | 'family' | 'solo'>('friends');
   const [travelers, setTravelers] = useState('2');
   const [budget, setBudget] = useState('₹50,000');
   const [travelStyle, setTravelStyle] = useState('Coastal & Heritage');
@@ -29,6 +30,7 @@ export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps
           budget,
           travelers,
           style: travelStyle,
+          travelType,
         });
       }
       setTimeout(() => setShowSuccess(false), 3000);
@@ -89,7 +91,23 @@ export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps
             </div>
 
             {/* Parameter Selectors Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+              {/* Travel Type */}
+              <div className="bg-white border border-[#E7E5E2] rounded-2xl p-4">
+                <label className="text-[11px] font-mono text-[#6F6F6F] uppercase mb-1 flex items-center gap-1.5">
+                  <span>👥</span> Traveling With
+                </label>
+                <select
+                  value={travelType}
+                  onChange={(e) => setTravelType(e.target.value as any)}
+                  className="w-full bg-transparent text-sm font-medium text-[#000000] focus:outline-none cursor-pointer"
+                >
+                  <option value="friends">👥 Friends (Split & Settle)</option>
+                  <option value="family">👨‍👩‍👧‍👦 Family (Shared Expenses)</option>
+                  <option value="solo">👤 Solo (Personal Tracker)</option>
+                </select>
+              </div>
+
               {/* Travelers */}
               <div className="bg-white border border-[#E7E5E2] rounded-2xl p-4">
                 <label className="text-[11px] font-mono text-[#6F6F6F] uppercase mb-1 flex items-center gap-1.5">

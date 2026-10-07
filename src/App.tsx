@@ -59,7 +59,7 @@ export function App() {
 
   // Render correct view based on path
   const renderPathView = () => {
-    if (currentPath === '/plan' || currentPath === '/planner/intro' || currentPath === '/train' || currentPath === '/lumora' || currentPath === '/train-experience') {
+    if (currentPath === '/train' || currentPath === '/lumora' || currentPath === '/train-experience') {
       return (
         <div className="animate-fade-rise">
           <LumoraTrainExperience
@@ -72,7 +72,7 @@ export function App() {
       );
     }
 
-    if (currentPath === '/planner/new' || currentPath === '/journeys/new' || currentPath === '/journeys/new/national' || currentPath === '/journeys/new/international') {
+    if (currentPath === '/plan' || currentPath === '/planner/intro' || currentPath === '/planner/new' || currentPath === '/journeys/new' || currentPath === '/journeys/new/national' || currentPath === '/journeys/new/international') {
       return (
         <div className="animate-fade-rise">
           <JourneyPlanner onNavigate={navigate} />

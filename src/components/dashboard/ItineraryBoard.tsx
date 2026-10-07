@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useTrip } from '../../context/TripContext';
 import type { ActivityType } from '../../services/db';
+import type { StoredJourney } from '../../services/travelStorage';
 
 // ── activity type presentation ──
 const ACT_TYPES: { value: ActivityType; label: string; Icon: typeof Compass }[] = [
@@ -46,7 +47,12 @@ const formatStamp = (iso: string): string => {
   });
 };
 
-export const ItineraryBoard = () => {
+interface ItineraryBoardProps {
+  journey?: StoredJourney | null;
+  onPlanNew?: () => void;
+}
+
+export const ItineraryBoard = ({ onPlanNew }: ItineraryBoardProps) => {
   const {
     activeTrip,
     addActivity,
@@ -76,14 +82,12 @@ export const ItineraryBoard = () => {
   const [showAddDay, setShowAddDay] = useState(false);
   const [newCity, setNewCity] = useState('');
 
-  if (!activeTrip) return null;
-
   // ── drag & drop ──
   const performDrop = async (targetDayId: string, beforeActivityId: string | null) => {
     const d = drag;
     setDrag(null);
     setDropHint(null);
-    if (!d) return;
+    if (!d || !activeTrip) return;
     if (d.fromDayId === targetDayId) {
       const day = activeTrip.days.find((x) => x.id === targetDayId);
       if (!day) return;
@@ -134,7 +138,6 @@ export const ItineraryBoard = () => {
     });
     setNewTitle('');
     setNewTime('');
-    // keep the form open for rapid entry
   };
 
   const saveAddDay = async () => {
@@ -143,6 +146,47 @@ export const ItineraryBoard = () => {
     setNewCity('');
     setShowAddDay(false);
   };
+
+  if (!activeTrip || !activeTrip.days || activeTrip.days.length === 0) {
+    return (
+      <section
+        id="itinerary"
+        className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 py-20 border-t border-[#E7E5E2]"
+      >
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 gap-4">
+          <div>
+            <span className="text-xs uppercase tracking-widest font-mono text-[#6F6F6F] block mb-2">
+              01 / ITINERARY
+            </span>
+            <h2 className="font-instrument text-4xl sm:text-5xl md:text-6xl text-[#000000] tracking-headline leading-none">
+              Shape every day.
+            </h2>
+            <p className="font-inter text-sm sm:text-base text-[#6F6F6F] mt-4 max-w-lg">
+              Drag to reorder, move activities between days, edit anything — changes save instantly.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-dashed border-[#E7E5E2] bg-[#FAF8F5]/50 p-12 text-center flex flex-col items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-white border border-[#E7E5E2] flex items-center justify-center mb-4 text-[#6F6F6F]">
+            <CalendarPlus className="w-5 h-5" />
+          </div>
+          <h3 className="font-instrument text-2xl text-[#000000] mb-2">No journey itinerary yet</h3>
+          <p className="font-inter text-sm text-[#6F6F6F] max-w-md mb-6">
+            Plan a journey to automatically generate and organize your day-by-day itinerary.
+          </p>
+          {onPlanNew && (
+            <button
+              onClick={onPlanNew}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-mono uppercase tracking-wider hover:bg-neutral-800 transition-all shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Plan a Journey
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -254,14 +298,14 @@ export const ItineraryBoard = () => {
                         <button
                           type="button"
                           onClick={() => saveEdit(day.id, a.id)}
-                          className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 bg-black text-white text-xs hover:bg-neutral-800"
+                          className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 bg-black text-white text-xs hover:bg-neutral-800 cursor-pointer"
                         >
                           <Check className="w-3 h-3" /> Save
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
-                          className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 border border-[#E7E5E2] text-[#6F6F6F] text-xs hover:bg-neutral-50"
+                          className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 border border-[#E7E5E2] text-[#6F6F6F] text-xs hover:bg-neutral-50 cursor-pointer"
                         >
                           <X className="w-3 h-3" /> Cancel
                         </button>
@@ -323,7 +367,7 @@ export const ItineraryBoard = () => {
                           type="button"
                           aria-label="Edit"
                           onClick={() => startEdit(a.id, a.title, a.time ?? '', a.type)}
-                          className="p-1.5 text-[#6F6F6F] hover:text-black rounded-lg hover:bg-neutral-100"
+                          className="p-1.5 text-[#6F6F6F] hover:text-black rounded-lg hover:bg-neutral-100 cursor-pointer"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -331,7 +375,7 @@ export const ItineraryBoard = () => {
                           type="button"
                           aria-label="Delete"
                           onClick={() => removeActivity(day.id, a.id)}
-                          className="p-1.5 text-[#6F6F6F] hover:text-red-600 rounded-lg hover:bg-neutral-100"
+                          className="p-1.5 text-[#6F6F6F] hover:text-red-600 rounded-lg hover:bg-neutral-100 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -382,14 +426,14 @@ export const ItineraryBoard = () => {
                     <button
                       type="button"
                       onClick={() => saveAdd(day.id)}
-                      className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 bg-black text-white text-xs hover:bg-neutral-800"
+                      className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 bg-black text-white text-xs hover:bg-neutral-800 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" /> Add
                     </button>
                     <button
                       type="button"
                       onClick={() => setAddingDayId(null)}
-                      className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 border border-[#E7E5E2] text-[#6F6F6F] text-xs hover:bg-neutral-50"
+                      className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 border border-[#E7E5E2] text-[#6F6F6F] text-xs hover:bg-neutral-50 cursor-pointer"
                     >
                       Done
                     </button>
@@ -399,7 +443,7 @@ export const ItineraryBoard = () => {
                 <button
                   type="button"
                   onClick={() => startAdd(day.id)}
-                  className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[#E7E5E2] px-3 py-2.5 text-xs font-medium text-[#6F6F6F] hover:border-neutral-400 hover:text-black transition-all"
+                  className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[#E7E5E2] px-3 py-2.5 text-xs font-medium text-[#6F6F6F] hover:border-neutral-400 hover:text-black transition-all cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add activity
                 </button>
@@ -426,14 +470,14 @@ export const ItineraryBoard = () => {
                 <button
                   type="button"
                   onClick={saveAddDay}
-                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 bg-black text-white text-xs hover:bg-neutral-800"
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 bg-black text-white text-xs hover:bg-neutral-800 cursor-pointer"
                 >
                   <Check className="w-3 h-3" /> Add day
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddDay(false)}
-                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 border border-[#E7E5E2] text-[#6F6F6F] text-xs hover:bg-neutral-50"
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 border border-[#E7E5E2] text-[#6F6F6F] text-xs hover:bg-neutral-50 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -443,7 +487,7 @@ export const ItineraryBoard = () => {
             <button
               type="button"
               onClick={() => setShowAddDay(true)}
-              className="inline-flex flex-col items-center gap-2 text-[#6F6F6F] hover:text-black transition-colors"
+              className="inline-flex flex-col items-center gap-2 text-[#6F6F6F] hover:text-black transition-colors cursor-pointer"
             >
               <CalendarPlus className="w-6 h-6" />
               <span className="font-mono text-xs uppercase tracking-wider">Add a day</span>
