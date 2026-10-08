@@ -7,26 +7,22 @@ function aetheraBackendPlugin(): Plugin {
   return {
     name: 'aethera-backend-plugin',
     configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        if (req.url?.startsWith('/api/flights/search')) {
-          await handleFlightSearchRequest(req, res);
-          return;
+      const app = createApp();
+      server.middlewares.use((req, res, next) => {
+        if (req.url && (req.url.startsWith('/api') || req.url.startsWith('/api/'))) {
+          return app(req, res, next);
         }
         next();
       });
-      const app = createApp();
-      server.middlewares.use(app);
     },
     configurePreviewServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        if (req.url?.startsWith('/api/flights/search')) {
-          await handleFlightSearchRequest(req, res);
-          return;
+      const app = createApp();
+      server.middlewares.use((req, res, next) => {
+        if (req.url && (req.url.startsWith('/api') || req.url.startsWith('/api/'))) {
+          return app(req, res, next);
         }
         next();
       });
-      const app = createApp();
-      server.middlewares.use(app);
     },
   };
 }

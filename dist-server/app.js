@@ -18,13 +18,34 @@ const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+const isAllowedOrigin = (origin) => {
+    if (allowedOrigins.includes(origin))
+        return true;
+    try {
+        const { hostname } = new URL(origin);
+        if (hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '::1' ||
+            hostname === '0.0.0.0' ||
+            hostname.endsWith('.localhost') ||
+            hostname.startsWith('192.168.') ||
+            hostname.startsWith('10.') ||
+            hostname.startsWith('172.')) {
+            return true;
+        }
+    }
+    catch {
+        // If not a valid URL, rely on direct matching
+    }
+    return false;
+};
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || isAllowedOrigin(origin)) {
             callback(null, true);
             return;
         }
-        callback(new Error('Origin is not allowed by the API server.'));
+        callback(new Error(`Origin '${origin}' is not allowed by the API server.`));
     },
 };
 const rateLimitResponse = (_req, res) => {

@@ -23,6 +23,14 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     return;
   }
 
+  if (error instanceof Error && error.message.includes('not allowed by the API server')) {
+    res.status(403).json({
+      error: error.message,
+      code: 'FORBIDDEN_ORIGIN',
+    });
+    return;
+  }
+
   console.error('Unhandled API error.', {
     method: req.method,
     path: req.path,
