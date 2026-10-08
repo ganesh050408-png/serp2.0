@@ -3,12 +3,15 @@ import { createPortal } from 'react-dom';
 import { Sparkles, X, Send, Navigation, Car, Stethoscope, Pill, Loader2 } from 'lucide-react';
 import { callAetheraAI } from '../../services/aiService';
 
+import { StoredJourney } from '../../services/travelStorage';
+
 interface LiveTravelCompanionDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onOpen: () => void;
   onRequestRide: (destination: string) => void;
   onOpenCategory: (category: 'hospitals' | 'pharmacies' | 'unwell') => void;
+  journey?: StoredJourney | null;
 }
 
 interface CompanionMessage {
@@ -36,15 +39,44 @@ export const LiveTravelCompanionDrawer = ({
   onOpen,
   onRequestRide,
   onOpenCategory,
+  journey,
 }: LiveTravelCompanionDrawerProps) => {
+  const currentCity =
+    journey?.destinations?.[0]?.city ||
+    journey?.destinations?.[0]?.name ||
+    journey?.city ||
+    journey?.destination ||
+    'your destination';
+  const journeyTitle = journey?.destination || journey?.destinations?.[0]?.name || 'Live Journey';
+  const totalDays = journey?.itinerary?.length || 5;
+  const firstDay = journey?.itinerary?.[0];
+  const firstAct = firstDay?.activities?.[0];
+  const nextStop =
+    (typeof firstAct === 'string'
+      ? firstAct
+      : firstAct?.name) ||
+    journey?.destinations?.[0]?.attractions?.[0] ||
+    'Next Checkpoint';
+
   const [messages, setMessages] = useState<CompanionMessage[]>([
     {
       sender: 'ai',
-      text: 'Good afternoon, Aravind. You are in Panaji on Day 4. Your next stop is Fort Aguada at 15:30 (4.2 km away). How can I assist you right now?',
+      text: `Good afternoon, Aravind. You are in ${currentCity} exploring your ${journeyTitle} journey. Your next stop is ${nextStop}. How can I assist you right now?`,
     },
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (journey) {
+      setMessages([
+        {
+          sender: 'ai',
+          text: `Good afternoon, Aravind. You are in ${currentCity} exploring your ${journeyTitle} journey. Your next stop is ${nextStop}. How can I assist you right now?`,
+        },
+      ]);
+    }
+  }, [journey?.id, currentCity, nextStop, journeyTitle]);
 
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || inputText;
@@ -59,7 +91,7 @@ export const LiveTravelCompanionDrawer = ({
     try {
       const aiReplyText = await callAetheraAI(
         updatedMsgs,
-        'Live In-Destination Mode: Panaji, Goa (Day 4 of 10). Current Location: Fontainhas Promenade. Next Stop: Fort Aguada at 15:30 (4.2 km). 4 Group Travelers (Meera, Rohan, Tara).'
+        `Live In-Destination Mode: ${currentCity} (${journeyTitle}, Day 1 of ${totalDays}). Current Location: ${currentCity} Central. Next Stop: ${nextStop}. Group Travelers: ${journey?.travelers || 2}.`
       );
 
       let actions: CompanionMessage['actions'];
@@ -73,8 +105,8 @@ export const LiveTravelCompanionDrawer = ({
             icon: Stethoscope,
           },
           {
-            label: 'Book Ride to Hospital (₹180)',
-            action: () => onRequestRide('CityCare Hospital, Panaji'),
+            label: `Book Ride to Hospital in ${currentCity}`,
+            action: () => onRequestRide(`Nearest Hospital, ${currentCity}`),
             icon: Car,
           },
         ];
@@ -94,16 +126,16 @@ export const LiveTravelCompanionDrawer = ({
       } else if (lower.includes('hotel') || lower.includes('stay')) {
         actions = [
           {
-            label: 'Request Ride to Hotel',
-            action: () => onRequestRide('Heritage Villa Hotel, Panaji'),
+            label: `Request Ride to Hotel in ${currentCity}`,
+            action: () => onRequestRide(`Hotel in ${currentCity}`),
             icon: Car,
           },
         ];
       } else {
         actions = [
           {
-            label: 'Navigate to Fort Aguada',
-            action: () => onRequestRide('Fort Aguada'),
+            label: `Navigate to ${nextStop}`,
+            action: () => onRequestRide(nextStop),
             icon: Navigation,
           },
         ];

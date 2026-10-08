@@ -55,6 +55,16 @@ interface DashboardPageProps {
 export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps) => {
   const { journeys, activeJourney, saveJourney } = useJourneys();
 
+  // Active journey state (allows switching between journeys)
+  const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(null);
+  const currentLiveJourney = journeys.find((j) => j.id === selectedJourneyId) || activeJourney;
+  const currentLiveCity =
+    currentLiveJourney?.destinations?.[0]?.city ||
+    currentLiveJourney?.destinations?.[0]?.name ||
+    currentLiveJourney?.city ||
+    currentLiveJourney?.destination ||
+    'Goa';
+
   // Mode state: 'planning' (before trip) or 'live' (active in-destination companion)
   const [tripMode, setTripMode] = useState<'planning' | 'live'>('planning');
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -202,12 +212,15 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
         <div>
           {/* Live Hero with Weather & Checkpoint */}
           <LiveJourneyHero
+            journey={currentLiveJourney}
+            journeys={journeys}
+            onSelectJourney={(id) => setSelectedJourneyId(id)}
             onOpenMap={() => scrollToSection('live-map')}
             onOpenAI={() => setIsAIOpen(true)}
           />
 
           {/* Weather alerts for the current city (feature G) */}
-          <WeatherAlertBanner city="Goa" className="pt-8" />
+          <WeatherAlertBanner city={currentLiveCity} className="pt-8" />
 
           {/* Proactive Smart Travel Suggestions */}
           <SmartTravelSuggestions
@@ -230,6 +243,7 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
 
           {/* Today's Chronological Live Itinerary */}
           <TodayLiveItinerary
+            journey={currentLiveJourney}
             onNavigate={() => scrollToSection('live-map')}
             onGetRide={() => setActiveServiceCategory('rides')}
           />
@@ -352,12 +366,14 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
           onOpen={() => setIsAIOpen(true)}
           onRequestRide={handleRequestRide}
           onOpenCategory={(cat) => setActiveServiceCategory(cat)}
+          journey={currentLiveJourney}
         />
       ) : (
         <AIAssistantDrawer
           isOpen={isAIOpen}
           onClose={() => setIsAIOpen(false)}
           onOpen={() => setIsAIOpen(true)}
+          journey={activeJourney}
         />
       )}
 
@@ -380,6 +396,7 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
         activeCategory={activeServiceCategory}
         onClose={() => setActiveServiceCategory(null)}
         onRequestRide={handleRequestRide}
+        city={currentLiveCity}
       />
 
       {/* User Profile & Preferences Drawer */}

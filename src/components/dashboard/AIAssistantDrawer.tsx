@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, X, Send, Check, ArrowRight, Loader2 } from 'lucide-react';
 import { callAetheraAI } from '../../services/aiService';
+import { StoredJourney } from '../../services/travelStorage';
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onOpen: () => void;
+  journey?: StoredJourney | null;
 }
 
 interface Message {
@@ -27,16 +29,32 @@ const QUICK_QUESTIONS = [
   'What should I pack?',
 ];
 
-export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawerProps) => {
+export const AIAssistantDrawer = ({ isOpen, onClose, onOpen, journey }: AIAssistantDrawerProps) => {
+  const journeyTitle = journey?.destination || journey?.destinations?.[0]?.name || 'Current Journey';
+  const totalDays = journey?.itinerary?.length || 7;
+  const travelers = journey?.travelers || 2;
+  const budget = journey?.budgetValue?.label || (journey?.budget ? `₹${journey.budget.toLocaleString()}` : '₹50,000');
+
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
-      text: 'Good morning Aravind. I am tracking your Goa · Mumbai · Delhi journey. How may I refine your plans today?',
+      text: `Good morning Aravind. I am tracking your ${journeyTitle} journey (${totalDays} Days, ${travelers} Travelers). How may I refine your plans today?`,
     },
   ]);
   const [inputText, setInputText] = useState('');
   const [appliedAction, setAppliedAction] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (journey) {
+      setMessages([
+        {
+          sender: 'ai',
+          text: `Good morning Aravind. I am tracking your ${journeyTitle} journey (${totalDays} Days, ${travelers} Travelers). How may I refine your plans today?`,
+        },
+      ]);
+    }
+  }, [journey?.id, journeyTitle, totalDays, travelers]);
 
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || inputText;
@@ -51,7 +69,7 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
     try {
       const aiReplyText = await callAetheraAI(
         newMsgs,
-        'Active Trip: Goa · Mumbai · Delhi (10 Days), 4 Travelers, Budget ₹54,800'
+        `Active Trip: ${journeyTitle} (${totalDays} Days), ${travelers} Travelers, Budget ${budget}`
       );
 
       let actionButton: { label: string; action: string } | undefined;
