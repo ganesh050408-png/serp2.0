@@ -30,6 +30,14 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   const [editEmail, setEditEmail] = useState(profile.email);
   const [editPhone, setEditPhone] = useState(profile.phone);
   const [editBio, setEditBio] = useState(profile.bio);
+  const [editReligion, setEditReligion] = useState(profile.religion || 'Prefer not to say');
+  const [editCustomReligion, setEditCustomReligion] = useState(
+    ['Prefer not to say', 'Hinduism', 'Islam', 'Christianity', 'Buddhism', 'Jainism', 'Sikhism', 'Judaism'].includes(profile.religion || '')
+      ? ''
+      : profile.religion || ''
+  );
+  const [editReligionPrivate, setEditReligionPrivate] = useState(profile.religionPrivate ?? true);
+  const [editAllowRecommendations, setEditAllowRecommendations] = useState(profile.allowReligiousRecommendations ?? false);
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'saved' | 'settings'>('profile');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -41,6 +49,11 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
       setEditEmail(p.email);
       setEditPhone(p.phone);
       setEditBio(p.bio);
+      const isKnown = ['Prefer not to say', 'Hinduism', 'Islam', 'Christianity', 'Buddhism', 'Jainism', 'Sikhism', 'Judaism'].includes(p.religion || '');
+      setEditReligion(isKnown ? (p.religion || 'Prefer not to say') : 'Other');
+      setEditCustomReligion(isKnown ? '' : (p.religion || ''));
+      setEditReligionPrivate(p.religionPrivate ?? true);
+      setEditAllowRecommendations(p.allowReligiousRecommendations ?? false);
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -54,12 +67,16 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalReligion = editReligion === 'Other' ? (editCustomReligion.trim() || 'Other') : editReligion;
     const updated: UserProfile = {
       ...profile,
       name: editName,
       email: editEmail,
       phone: editPhone,
       bio: editBio,
+      religion: finalReligion,
+      religionPrivate: editReligionPrivate,
+      allowReligiousRecommendations: editAllowRecommendations,
     };
     travelStorage.saveProfile(updated);
     setProfile(updated);
@@ -186,6 +203,22 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {/* Sensitive Religion / Belief Setting */}
+                    <div className="pt-3 border-t border-neutral-100 text-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-mono uppercase text-[#6F6F6F]">Religion / Belief (Optional)</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-100 text-[#6F6F6F]">
+                          {profile.religionPrivate !== false ? '🔒 Private' : '🌐 Shared'}
+                        </span>
+                      </div>
+                      <div className="font-medium text-black">{profile.religion || 'Prefer not to say'}</div>
+                      {profile.allowReligiousRecommendations && (
+                        <p className="text-[11px] text-emerald-700 mt-1 font-inter">
+                          ✓ Personalized cultural & religious site recommendations enabled
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="bg-white border border-[#E7E5E2] rounded-2xl p-6">
@@ -247,11 +280,69 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                     />
                   </div>
 
+                  {/* Sensitive Belief / Religion Field */}
+                  <div className="pt-2 border-t border-neutral-100 space-y-2">
+                    <label className="text-[11px] font-mono uppercase text-[#6F6F6F] block">
+                      Religion / Belief (Optional & Sensitive)
+                    </label>
+                    <select
+                      value={editReligion}
+                      onChange={(e) => setEditReligion(e.target.value)}
+                      className="w-full bg-neutral-50 border border-[#E7E5E2] rounded-xl px-4 py-2 text-sm text-black focus:outline-none focus:border-black"
+                    >
+                      <option value="Prefer not to say">Prefer not to say (Default)</option>
+                      <option value="Hinduism">Hinduism</option>
+                      <option value="Islam">Islam</option>
+                      <option value="Christianity">Christianity</option>
+                      <option value="Buddhism">Buddhism</option>
+                      <option value="Jainism">Jainism</option>
+                      <option value="Sikhism">Sikhism</option>
+                      <option value="Judaism">Judaism</option>
+                      <option value="Other">Other...</option>
+                    </select>
+
+                    {editReligion === 'Other' && (
+                      <input
+                        type="text"
+                        value={editCustomReligion}
+                        onChange={(e) => setEditCustomReligion(e.target.value)}
+                        placeholder="Specify belief or religion..."
+                        className="w-full bg-neutral-50 border border-[#E7E5E2] rounded-xl px-4 py-2 text-sm text-black focus:outline-none focus:border-black mt-2"
+                      />
+                    )}
+
+                    <div className="space-y-2 pt-1">
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editReligionPrivate}
+                          onChange={(e) => setEditReligionPrivate(e.target.checked)}
+                          className="mt-0.5 rounded border-neutral-300 text-black focus:ring-0"
+                        />
+                        <span className="text-xs text-[#6F6F6F]">
+                          <strong className="text-black font-medium">Keep strictly private</strong> (Never visible to trip collaborators or in public shares)
+                        </span>
+                      </label>
+
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editAllowRecommendations}
+                          onChange={(e) => setEditAllowRecommendations(e.target.checked)}
+                          className="mt-0.5 rounded border-neutral-300 text-black focus:ring-0"
+                        />
+                        <span className="text-xs text-[#6F6F6F]">
+                          Use my religious preference to recommend nearby temples, mosques, churches, kosher/halal/vegetarian dining, or cultural heritage sites during my journeys.
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-end gap-3 pt-3">
                     <button
                       type="button"
                       onClick={() => setIsEditing(false)}
-                      className="px-4 py-2 rounded-full text-xs font-mono text-[#6F6F6F] hover:text-black"
+                      className="px-4 py-2 rounded-full text-xs font-mono text-[#6F6F6F] hover:text-black cursor-pointer"
                     >
                       Cancel
                     </button>

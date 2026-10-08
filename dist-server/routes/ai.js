@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ApiError } from '../errors.js';
-import { createAnthropicChatCompletion } from '../services/anthropicService.js';
+import { createGroqChatCompletion } from '../services/groqService.js';
 const aiRouter = Router();
 const isRecord = (value) => typeof value === 'object' && value !== null;
 const parseRequest = (body) => {
@@ -34,7 +34,7 @@ const parseRequest = (body) => {
 aiRouter.post('/chat', async (req, res, next) => {
     try {
         const { messages, contextInfo } = parseRequest(req.body);
-        const text = await createAnthropicChatCompletion(messages, contextInfo);
+        const text = await createGroqChatCompletion(messages, contextInfo);
         res.json({ text });
     }
     catch (error) {

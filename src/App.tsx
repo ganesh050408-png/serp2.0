@@ -11,6 +11,8 @@ import { LumoraTrainExperience } from './components/LumoraTrainExperience';
 import { ScenicTrainAuth } from './components/auth/ScenicTrainAuth';
 
 import { JourneyCalendar } from './components/dashboard/JourneyCalendar';
+import { HospitalsPage } from './components/dashboard/HospitalsPage';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'dashboard'>(() => {
@@ -92,6 +94,16 @@ export function App() {
       return (
         <div className="animate-fade-rise">
           <JourneyDetail journeyId={journeyId} onNavigate={navigate} />
+        </div>
+      );
+    }
+
+    if (currentPath === '/hospitals' || currentPath === '/hospitals-near-me') {
+      return (
+        <div className="animate-fade-rise">
+          <ErrorBoundary fallbackTitle="Unable to load Hospitals directory">
+            <HospitalsPage onNavigate={navigate} />
+          </ErrorBoundary>
         </div>
       );
     }

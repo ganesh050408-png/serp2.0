@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, User, Menu, X, ArrowLeft } from 'lucide-react';
+import { Sparkles, User, Menu, X, ArrowLeft, Hospital, Bell } from 'lucide-react';
+import { travelStorage } from '../../services/travelStorage';
 
 interface DashboardNavbarProps {
   onOpenAI: () => void;
   onOpenProfile?: () => void;
   onOpenJournal?: () => void;
+  onOpenHospitals?: () => void;
+  onOpenNotifications?: () => void;
   onGoToLanding?: () => void;
   onNavigateSection?: (sectionId: string) => void;
   tripMode: 'planning' | 'live';
@@ -15,6 +18,8 @@ export const DashboardNavbar = ({
   onOpenAI,
   onOpenProfile,
   onOpenJournal,
+  onOpenHospitals,
+  onOpenNotifications,
   onGoToLanding,
   onNavigateSection,
   tripMode,
@@ -23,6 +28,12 @@ export const DashboardNavbar = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeItem, setActiveItem] = useState('Home');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const unread = travelStorage.getNotifications().filter((n) => !n.read).length;
+    setUnreadCount(unread);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,6 +50,7 @@ export const DashboardNavbar = ({
     { label: 'Bikes & Rail', section: 'transit-rentals' },
     { label: 'AI Planner', section: 'ai-planner' },
     { label: 'Journal', section: 'journal_action' },
+    { label: 'Hospitals', section: 'hospitals_action', icon: Hospital, ariaLabel: 'Hospitals near me' },
   ];
 
   const liveNavItems = [
@@ -47,6 +59,7 @@ export const DashboardNavbar = ({
     { label: 'Today’s Plan', section: 'today-schedule' },
     { label: 'Companions', section: 'travel-together' },
     { label: 'Budget', section: 'budget' },
+    { label: 'Hospitals', section: 'hospitals_action', icon: Hospital, ariaLabel: 'Hospitals near me' },
   ];
 
   const currentNavItems = tripMode === 'live' ? liveNavItems : planningNavItems;
@@ -60,6 +73,13 @@ export const DashboardNavbar = ({
         onOpenJournal();
       } else if (onNavigateSection) {
         onNavigateSection('itinerary');
+      }
+      return;
+    }
+
+    if (section === 'hospitals_action') {
+      if (onOpenHospitals) {
+        onOpenHospitals();
       }
       return;
     }
@@ -124,24 +144,46 @@ export const DashboardNavbar = ({
         </div>
 
         {/* Center Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-7">
-          {currentNavItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => handleItemClick(item.label, item.section)}
-              className={`text-sm tracking-wide transition-colors duration-200 cursor-pointer ${
-                activeItem === item.label
-                  ? 'text-[#000000] font-medium'
-                  : 'text-[#6F6F6F] hover:text-[#000000]'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+        <nav className="hidden md:flex items-center space-x-6 lg:space-x-7">
+          {currentNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.label}
+                onClick={() => handleItemClick(item.label, item.section)}
+                aria-label={item.ariaLabel || item.label}
+                className={`text-sm tracking-wide transition-colors duration-200 cursor-pointer flex items-center gap-1.5 py-1 px-1.5 rounded-lg hover:bg-neutral-100/70 ${
+                  activeItem === item.label
+                    ? 'text-[#000000] font-medium'
+                    : 'text-[#6F6F6F] hover:text-[#000000]'
+                }`}
+              >
+                {Icon && <Icon className="w-3.5 h-3.5 opacity-70" />}
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </nav>
 
-        {/* Right Actions: AI Assistant Pill + Profile */}
+        {/* Right Actions: Notifications + AI Assistant Pill + Profile */}
         <div className="hidden sm:flex items-center space-x-3">
+          {onOpenNotifications && (
+            <button
+              type="button"
+              onClick={onOpenNotifications}
+              className="relative p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-black border border-[#E7E5E2] transition-colors cursor-pointer"
+              title="View trip alerts and notifications"
+              aria-label="View notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white rounded-full text-[9px] font-mono flex items-center justify-center font-bold">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onOpenAI}
@@ -214,17 +256,22 @@ export const DashboardNavbar = ({
             </button>
           </div>
 
-          {currentNavItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => handleItemClick(item.label, item.section)}
-              className={`text-left text-base py-1 transition-colors ${
-                activeItem === item.label ? 'text-[#000000] font-medium' : 'text-[#6F6F6F]'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+          {currentNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.label}
+                onClick={() => handleItemClick(item.label, item.section)}
+                aria-label={item.ariaLabel || item.label}
+                className={`text-left text-base py-1 transition-colors flex items-center gap-2 ${
+                  activeItem === item.label ? 'text-[#000000] font-medium' : 'text-[#6F6F6F]'
+                }`}
+              >
+                {Icon && <Icon className="w-4 h-4 opacity-70" />}
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
           <div className="pt-2 flex items-center justify-between border-t border-neutral-100">
             <button
               type="button"

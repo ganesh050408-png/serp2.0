@@ -1,166 +1,466 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  MapPin,
   Navigation,
-  ShieldCheck,
-  Check,
+  CheckCircle2,
   ExternalLink,
-  X,
   Car,
-  Copy,
+  AlertCircle,
+  RefreshCw,
+  Clock,
+  Compass,
+  KeyRound,
 } from 'lucide-react';
-
-interface Waypoint {
-  id: string;
-  name: string;
-  category: string;
-  time: string;
-  status: 'completed' | 'current' | 'upcoming';
-  distance: string;
-  eta: string;
-  xPercent: number;
-  yPercent: number;
-  steps: string[];
-}
-
-const TODAY_WAYPOINTS: Waypoint[] = [
-  {
-    id: '1',
-    name: 'Heritage Villa (Hotel)',
-    category: 'Stay',
-    time: '08:30',
-    status: 'completed',
-    distance: '2.1 km away',
-    eta: 'Origin',
-    xPercent: 24,
-    yPercent: 70,
-    steps: [
-      'Head east on Rua 31 de Janeiro toward Latin Quarter exit (300 m)',
-      'Turn right onto DB Bandodkar Marg (1.8 km)',
-      'Arrive at Panaji Waterfront Promenade on the right',
-    ],
-  },
-  {
-    id: '2',
-    name: 'Baga Beach Catamaran',
-    category: 'Activity',
-    time: '10:30',
-    status: 'completed',
-    distance: '3.8 km away',
-    eta: '12 min',
-    xPercent: 38,
-    yPercent: 46,
-    steps: [
-      'Head north across Mandovi River Bridge (1.2 km)',
-      'Continue on Calangute - Baga Rd (2.2 km)',
-      'Turn right at Jetty 4 toward Baga Shoreline (400 m)',
-    ],
-  },
-  {
-    id: '3',
-    name: 'Fisherman’s Wharf (Lunch)',
-    category: 'Dining',
-    time: '13:00',
-    status: 'completed',
-    distance: '0.8 km away',
-    eta: '3 min',
-    xPercent: 50,
-    yPercent: 62,
-    steps: [
-      'Head southwest along waterfront promenade (500 m)',
-      'Turn left at Sal River waterfront arcade (300 m)',
-      'Arrive at Fisherman’s Wharf dining pavilion on the left',
-    ],
-  },
-  {
-    id: '4',
-    name: 'Fort Aguada Bastion',
-    category: 'Heritage',
-    time: '15:30',
-    status: 'current',
-    distance: '4.2 km away',
-    eta: '14 min',
-    xPercent: 68,
-    yPercent: 38,
-    steps: [
-      'Head south on Panaji Promenade toward Dayanand Bandodkar Marg (400 m)',
-      'Take the Mandovi River Bridge approach toward Betim / Candolim (1.8 km)',
-      'Continue onto Aguada-Siolim Rd toward Sinquerim Promontory (1.6 km)',
-      'Arrive at Fort Aguada 17th-Century Bastion parking on the left (400 m)',
-    ],
-  },
-  {
-    id: '5',
-    name: 'Anjuna Sunset Point',
-    category: 'Leisure',
-    time: '18:30',
-    status: 'upcoming',
-    distance: '7.8 km away',
-    eta: '22 min',
-    xPercent: 82,
-    yPercent: 25,
-    steps: [
-      'Head northeast on Aguada - Candolim Rd (2.5 km)',
-      'Follow Calangute - Anjuna Highway toward South Anjuna cliff (4.8 km)',
-      'Turn left onto Sunset Point cliff trail (500 m)',
-    ],
-  },
-];
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { useJourneys } from '../../context/useJourneys';
 
 interface LiveLocationMapProps {
   onRequestRide?: (name: string) => void;
 }
 
-export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
-  const [showPermissionDialog, setShowPermissionDialog] = useState<boolean>(false);
-  const [activeWaypoint, setActiveWaypoint] = useState<Waypoint>(TODAY_WAYPOINTS[3]); // Fort Aguada
-  const [userLocationName, setUserLocationName] = useState<string>('Panaji Promenade, Goa');
-  const [isDirectionsModalOpen, setIsDirectionsModalOpen] = useState<boolean>(false);
-  const [copiedCoords, setCopiedCoords] = useState<boolean>(false);
+interface GeocodedStop {
+  id: string;
+  name: string;
+  dayNumber?: number;
+  lat: number;
+  lng: number;
+  completed: boolean;
+  isNext: boolean;
+}
 
+const AETHERA_MAP_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: 'geometry', stylers: [{ color: '#fbf9f5' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#555555' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 2 }] },
+  { featureType: 'administrative.land_parcel', elementType: 'labels.text.fill', stylers: [{ color: '#aaaaaa' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#f0ede6' }] },
+  { featureType: 'poi', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#e8ece5' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e6e3dc' }] },
+  { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#777777' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#eae6dd' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#444444' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#f0ece3' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#dbe5ec' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#8899a6' }] },
+];
+
+export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
+  const { activeJourney } = useJourneys();
+
+  // API & Map State
+  const [mapStatus, setMapStatus] = useState<'loading' | 'missing_key' | 'ready' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Live GPS State
+  const [gpsStatus, setGpsStatus] = useState<string>('GPS: Searching...');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userAddress, setUserAddress] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState<boolean>(false);
+
+  // Real Itinerary Stops & Directions
+  const [stops, setStops] = useState<GeocodedStop[]>([]);
+  const [completedStopIds, setCompletedStopIds] = useState<Set<string>>(new Set());
+  const [nextStop, setNextStop] = useState<GeocodedStop | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distanceText: string; durationText: string } | null>(null);
+
+  // Refs
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const userMarkerRef = useRef<google.maps.Marker | null>(null);
+  const accuracyCircleRef = useRef<google.maps.Circle | null>(null);
+  const stopMarkersRef = useRef<google.maps.Marker[]>([]);
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+  const lastGeocodedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
+  // Reverse geocode user position (throttled when moving > 80m)
+  const reverseGeocode = useCallback((lat: number, lng: number) => {
+    if (typeof google === 'undefined' || !google.maps || !google.maps.Geocoder) return;
+
+    if (lastGeocodedLocationRef.current) {
+      const prev = lastGeocodedLocationRef.current;
+      const dist = Math.hypot(prev.lat - lat, prev.lng - lng) * 111000;
+      if (dist < 80) return; // Skip if user moved less than 80m
+    }
+
+    lastGeocodedLocationRef.current = { lat, lng };
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+        const place = results[0];
+        const sublocality = place.address_components.find((c) =>
+          c.types.includes('sublocality') || c.types.includes('neighborhood')
+        )?.long_name;
+        const locality = place.address_components.find((c) => c.types.includes('locality'))?.long_name;
+        const formatted = sublocality && locality ? `${sublocality}, ${locality}` : place.formatted_address.split(',')[0];
+        setUserAddress(formatted || place.formatted_address);
+      }
+    });
+  }, []);
+
+  // Initialize and load Google Maps API
+  const initGoogleMap = useCallback(async () => {
+    if (!apiKey || apiKey === 'your_key_here' || apiKey === 'your_google_maps_api_key') {
+      setMapStatus('missing_key');
+      return;
+    }
+
+    setMapStatus('loading');
+    setErrorMessage(null);
+
+    try {
+      setOptions({
+        key: apiKey,
+        v: 'weekly',
+      });
+
+      await importLibrary('maps');
+      await importLibrary('routes');
+      await importLibrary('geocoding');
+
+      if (!mapContainerRef.current) return;
+
+      const defaultCenter = {
+        lat: activeJourney?.destinations?.[0]?.lat || 15.2993,
+        lng: activeJourney?.destinations?.[0]?.lng || 74.1240,
+      };
+
+      const map = new google.maps.Map(mapContainerRef.current, {
+        center: defaultCenter,
+        zoom: 13,
+        styles: AETHERA_MAP_STYLE,
+        disableDefaultUI: true,
+        zoomControl: true,
+        gestureHandling: 'greedy',
+      });
+
+      mapInstanceRef.current = map;
+
+      const directionsRenderer = new google.maps.DirectionsRenderer({
+        map,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: '#000000',
+          strokeOpacity: 0.85,
+          strokeWeight: 4,
+        },
+      });
+      directionsRendererRef.current = directionsRenderer;
+
+      setMapStatus('ready');
+    } catch (err: any) {
+      setMapStatus('error');
+      setErrorMessage(err?.message || 'Unable to load Google Maps.');
+    }
+  }, [apiKey, activeJourney]);
+
+  // Request & Watch User GPS
+  const startWatchingLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGpsStatus('GPS: Unsupported');
+      return;
+    }
+
+    setGpsStatus('GPS: Searching...');
+    setPermissionDenied(false);
+
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const acc = pos.coords.accuracy;
+        setUserLocation(coords);
+        setGpsStatus(`GPS: ±${Math.round(acc)} m`);
+        reverseGeocode(coords.lat, coords.lng);
+
+        if (mapInstanceRef.current) {
+          // Update or create live user pulsing marker
+          if (!userMarkerRef.current) {
+            userMarkerRef.current = new google.maps.Marker({
+              position: coords,
+              map: mapInstanceRef.current,
+              title: 'Your Current Location',
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 7,
+                fillColor: '#2563eb',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2.5,
+              },
+            });
+          } else {
+            userMarkerRef.current.setPosition(coords);
+          }
+
+          // Accuracy Circle
+          if (!accuracyCircleRef.current) {
+            accuracyCircleRef.current = new google.maps.Circle({
+              map: mapInstanceRef.current,
+              center: coords,
+              radius: acc,
+              fillColor: '#3b82f6',
+              fillOpacity: 0.12,
+              strokeColor: '#2563eb',
+              strokeOpacity: 0.25,
+              strokeWeight: 1,
+            });
+          } else {
+            accuracyCircleRef.current.setCenter(coords);
+            accuracyCircleRef.current.setRadius(acc);
+          }
+        }
+      },
+      (err) => {
+        if (err.code === 1) {
+          setPermissionDenied(true);
+          setGpsStatus('GPS: Permission denied');
+        } else {
+          setGpsStatus('GPS: Unavailable');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
+    );
+
+    watchIdRef.current = id;
+  }, [reverseGeocode]);
+
+  // Extract and geocode real stops from active journey
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsDirectionsModalOpen(false);
-        setShowPermissionDialog(false);
+    if (mapStatus !== 'ready' || typeof google === 'undefined' || !activeJourney) {
+      setStops([]);
+      return;
+    }
+
+    const geocoder = new google.maps.Geocoder();
+    const extractedStops: { name: string; dayNumber?: number }[] = [];
+
+    // Extract stops from journey's real itinerary
+    if (Array.isArray(activeJourney.itinerary)) {
+      activeJourney.itinerary.forEach((day) => {
+        if (Array.isArray(day.activities)) {
+          day.activities.forEach((act) => {
+            if (typeof act === 'string' && act.trim()) {
+              extractedStops.push({ name: act.trim(), dayNumber: day.dayNumber });
+            }
+          });
+        }
+      });
+    }
+
+    // If no activities, extract from destinations
+    if (extractedStops.length === 0 && Array.isArray(activeJourney.destinations)) {
+      activeJourney.destinations.forEach((dest) => {
+        if (Array.isArray(dest.attractions)) {
+          dest.attractions.forEach((attr) => {
+            extractedStops.push({ name: `${attr}, ${dest.city}` });
+          });
+        }
+      });
+    }
+
+    // Limit to max 6 stops for clean map rendering
+    const stopsToGeocode = extractedStops.slice(0, 6);
+    if (stopsToGeocode.length === 0) {
+      setStops([]);
+      return;
+    }
+
+    const cityContext = activeJourney.city || activeJourney.destinations?.[0]?.city || '';
+
+    // Geocode stops with fallback coordinates
+    const promises = stopsToGeocode.map((stopItem, index) => {
+      return new Promise<GeocodedStop>((resolve) => {
+        const query = cityContext && !stopItem.name.includes(cityContext) ? `${stopItem.name}, ${cityContext}` : stopItem.name;
+
+        geocoder.geocode({ address: query }, (results, status) => {
+          if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+            const loc = results[0].geometry.location;
+            resolve({
+              id: `stop_${index}`,
+              name: stopItem.name,
+              dayNumber: stopItem.dayNumber,
+              lat: loc.lat(),
+              lng: loc.lng(),
+              completed: false,
+              isNext: index === 0,
+            });
+          } else {
+            // Slight offset fallback around destination center
+            const baseLat = activeJourney.destinations?.[0]?.lat || 15.2993;
+            const baseLng = activeJourney.destinations?.[0]?.lng || 74.1240;
+            const offsetLat = baseLat + (index - 2) * 0.018;
+            const offsetLng = baseLng + (index - 2) * 0.015;
+            resolve({
+              id: `stop_${index}`,
+              name: stopItem.name,
+              dayNumber: stopItem.dayNumber,
+              lat: offsetLat,
+              lng: offsetLng,
+              completed: false,
+              isNext: index === 0,
+            });
+          }
+        });
+      });
+    });
+
+    Promise.all(promises).then((geocodedList) => {
+      setStops(geocodedList);
+    });
+  }, [mapStatus, activeJourney]);
+
+  // Update stop markers and calculate real directions
+  useEffect(() => {
+    if (mapStatus !== 'ready' || !mapInstanceRef.current || typeof google === 'undefined') return;
+
+    // Clear old stop markers
+    stopMarkersRef.current.forEach((m) => m.setMap(null));
+    stopMarkersRef.current = [];
+
+    const map = mapInstanceRef.current;
+    const bounds = new google.maps.LatLngBounds();
+
+    if (userLocation) {
+      bounds.extend(new google.maps.LatLng(userLocation.lat, userLocation.lng));
+    }
+
+    // Determine next upcoming stop
+    const firstUncompleted = stops.find((s) => !completedStopIds.has(s.id)) || null;
+    setNextStop(firstUncompleted);
+
+    stops.forEach((stop, index) => {
+      const isDone = completedStopIds.has(stop.id);
+      const isCurrentNext = firstUncompleted?.id === stop.id;
+
+      const marker = new google.maps.Marker({
+        position: { lat: stop.lat, lng: stop.lng },
+        map,
+        title: stop.name,
+        label: {
+          text: `${index + 1}`,
+          color: isDone ? '#999999' : isCurrentNext ? '#ffffff' : '#000000',
+          fontSize: '11px',
+          fontWeight: '600',
+        },
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: isCurrentNext ? 14 : 11,
+          fillColor: isDone ? '#f5f5f5' : isCurrentNext ? '#000000' : '#ffffff',
+          fillOpacity: 1,
+          strokeColor: isCurrentNext ? '#000000' : isDone ? '#d4d4d4' : '#000000',
+          strokeWeight: 2,
+        },
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="padding: 6px; font-family: sans-serif;">
+            <div style="font-size: 10px; font-family: monospace; color: #888; text-transform: uppercase;">Stop ${index + 1}</div>
+            <div style="font-weight: 600; font-size: 13px; color: #000; margin-top: 2px;">${stop.name}</div>
+            ${isDone ? '<div style="font-size: 10px; color: #059669; font-weight: 500; margin-top: 4px;">✓ Completed</div>' : ''}
+          </div>
+        `,
+      });
+
+      marker.addListener('click', () => {
+        infoWindow.open(map, marker);
+      });
+
+      stopMarkersRef.current.push(marker);
+      bounds.extend(new google.maps.LatLng(stop.lat, stop.lng));
+    });
+
+    // Draw real route between user (or origin) and next stop
+    if (firstUncompleted && directionsRendererRef.current) {
+      const directionsService = new google.maps.DirectionsService();
+      const origin = userLocation
+        ? new google.maps.LatLng(userLocation.lat, userLocation.lng)
+        : stops[0]
+        ? new google.maps.LatLng(stops[0].lat, stops[0].lng)
+        : null;
+
+      if (origin) {
+        directionsService.route(
+          {
+            origin,
+            destination: new google.maps.LatLng(firstUncompleted.lat, firstUncompleted.lng),
+            travelMode: google.maps.TravelMode.DRIVING,
+          },
+          (res, status) => {
+            if (status === google.maps.DirectionsStatus.OK && res) {
+              directionsRendererRef.current?.setDirections(res);
+              const leg = res.routes[0]?.legs[0];
+              if (leg) {
+                setRouteInfo({
+                  distanceText: leg.distance?.text || '',
+                  durationText: leg.duration?.text || '',
+                });
+              }
+            } else {
+              setRouteInfo(null);
+            }
+          }
+        );
+      }
+    }
+
+    if (!bounds.isEmpty()) {
+      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+    }
+  }, [stops, userLocation, completedStopIds, mapStatus]);
+
+  // Toggle stop completed
+  const handleToggleStop = (stopId: string) => {
+    setCompletedStopIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(stopId)) {
+        next.delete(stopId);
+      } else {
+        next.add(stopId);
+      }
+      return next;
+    });
+  };
+
+  // Recenter map on user location
+  const handleRecenter = () => {
+    if (userLocation && mapInstanceRef.current) {
+      mapInstanceRef.current.panTo(userLocation);
+      mapInstanceRef.current.setZoom(15);
+    } else {
+      startWatchingLocation();
+    }
+  };
+
+  // Mount on first render
+  useEffect(() => {
+    initGoogleMap();
+    startWatchingLocation();
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
       }
     };
-    if (isDirectionsModalOpen || showPermissionDialog) {
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isDirectionsModalOpen, showPermissionDialog]);
+  }, [initGoogleMap, startWatchingLocation]);
 
-  const handleGrantPermission = () => {
-    setShowPermissionDialog(false);
-  };
+  // Computed route progress
+  const totalStops = stops.length;
+  const completedCount = stops.filter((s) => completedStopIds.has(s.id)).length;
 
-  const handleManualLocation = () => {
-    const loc = prompt('Enter your current city or neighborhood:', 'Panaji, Goa');
-    if (loc) {
-      setUserLocationName(loc);
-      setShowPermissionDialog(false);
-    }
-  };
-
-  const handleOpenDirections = () => {
-    setIsDirectionsModalOpen(true);
-  };
-
-  const handleOpenGoogleMaps = () => {
-    const query = encodeURIComponent(`${activeWaypoint.name}, Goa, India`);
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${query}`, '_blank');
-  };
-
-  const handleCopyCoords = () => {
-    navigator.clipboard.writeText('15.4920° N, 73.7737° E');
-    setCopiedCoords(true);
-    setTimeout(() => setCopiedCoords(false), 2000);
-  };
+  const directionsUrl = nextStop
+    ? userLocation
+      ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${encodeURIComponent(nextStop.name)}&travelmode=driving`
+      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(nextStop.name)}&travelmode=driving`
+    : '#';
 
   return (
     <section id="live-map" className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 py-12">
@@ -168,316 +468,251 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
         <div>
           <span className="text-xs uppercase tracking-widest font-mono text-[#6F6F6F] block mb-1">
-            REAL-TIME SITUATIONAL RADAR
+            REAL-TIME LIVE GPS & ROUTE
           </span>
           <h2 className="font-instrument text-4xl sm:text-5xl text-[#000000] tracking-headline leading-none">
             Live Journey Radar
           </h2>
           <p className="text-xs sm:text-sm text-[#6F6F6F] font-inter mt-2">
-            Active tracking along Day 4: Panaji to Candolim & North Goa Promontory.
+            {activeJourney
+              ? `Live GPS tracking for ${activeJourney.destination || activeJourney.city || 'your current journey'}.`
+              : 'Live situational GPS and interactive waypoint navigator.'}
           </p>
         </div>
 
-        {/* Location permission toggle */}
-        <div className="flex items-center gap-3">
+        {/* GPS Status Indicator & Recenter Button */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-full px-3.5 py-1.5 bg-neutral-100 border border-[#E7E5E2] text-xs font-mono text-black">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                permissionDenied
+                  ? 'bg-red-500'
+                  : userLocation
+                  ? 'bg-emerald-500 animate-pulse'
+                  : 'bg-amber-400 animate-spin'
+              }`}
+            />
+            <span>{gpsStatus}</span>
+          </div>
+
           <button
             type="button"
-            onClick={() => setShowPermissionDialog(true)}
-            className="flex items-center gap-2 rounded-full px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-xs font-mono text-[#000000] transition-colors border border-[#E7E5E2] cursor-pointer"
+            onClick={handleRecenter}
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono transition-all cursor-pointer shadow-xs"
+            title="Locate me and recenter"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>GPS: High Accuracy</span>
+            <Navigation className="w-3.5 h-3.5" />
+            <span>Locate Me</span>
           </button>
         </div>
       </div>
 
-      {/* Permission & Location Config Modal */}
-      {showPermissionDialog && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="fixed inset-0 -z-10" onClick={() => setShowPermissionDialog(false)} />
-          <div className="bg-white border border-[#E7E5E2] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-4 text-black">
-              <MapPin className="w-6 h-6" />
+      {/* Main Map Card */}
+      <div className="bg-white border border-[#E7E5E2] rounded-[32px] p-4 sm:p-6 shadow-sm overflow-hidden flex flex-col space-y-6">
+        {/* Map Container View */}
+        <div className="relative w-full h-[320px] sm:h-[420px] rounded-2xl overflow-hidden bg-[#F5F4F0] border border-[#E7E5E2]">
+          <div ref={mapContainerRef} className="w-full h-full min-h-[320px] sm:min-h-[420px]" />
+
+          {/* Missing Google Maps API Key State */}
+          {mapStatus === 'missing_key' && (
+            <div className="absolute inset-0 bg-white/95 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-20">
+              <KeyRound className="w-10 h-10 text-neutral-400 mb-3 stroke-[1.5]" />
+              <h3 className="font-instrument text-2xl text-black mb-1">Google Maps Key Required</h3>
+              <p className="text-xs font-inter text-neutral-600 max-w-md mb-4 leading-relaxed">
+                Connect the Google Maps API to enable the live map. Set <code className="bg-neutral-100 px-2 py-0.5 rounded text-black font-mono">VITE_GOOGLE_MAPS_API_KEY</code> in your environment.
+              </p>
+              <span className="text-[11px] font-mono text-neutral-500">
+                APIs required: Maps JavaScript API, Places API, Directions API
+              </span>
             </div>
-            <h3 className="font-instrument text-3xl text-black mb-2">Location Accuracy</h3>
-            <p className="text-xs sm:text-sm text-[#6F6F6F] font-inter mb-6 leading-relaxed">
-              Aethera uses real-time GPS telemetry to estimate driving durations, flag scenic
-              detours, and find nearby assistance.
-            </p>
+          )}
 
-            <div className="flex flex-col gap-2.5">
+          {/* Map Loading State */}
+          {mapStatus === 'loading' && (
+            <div className="absolute inset-0 bg-[#FAF8F5] flex flex-col items-center justify-center gap-3 z-20">
+              <RefreshCw className="w-7 h-7 animate-spin text-black stroke-[1.5]" />
+              <span className="font-mono text-xs text-neutral-600">Loading map…</span>
+            </div>
+          )}
+
+          {/* Map Error State */}
+          {mapStatus === 'error' && (
+            <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center p-6 text-center z-20">
+              <AlertCircle className="w-8 h-8 text-red-600 mb-2" />
+              <h4 className="font-instrument text-xl text-black">Unable to load the map.</h4>
+              <p className="text-xs text-neutral-600 mt-1 mb-4">{errorMessage || 'Check network connection or API quota.'}</p>
               <button
                 type="button"
-                onClick={handleGrantPermission}
-                className="w-full rounded-full py-3 bg-[#000000] text-white text-xs font-medium hover:bg-neutral-800 transition-all cursor-pointer"
+                onClick={initGoogleMap}
+                className="px-4 py-2 rounded-full bg-black text-white text-xs font-mono hover:bg-neutral-800 transition-colors cursor-pointer"
               >
-                Enable Automatic Live Geolocation
-              </button>
-              <button
-                type="button"
-                onClick={handleManualLocation}
-                className="w-full rounded-full py-3 bg-neutral-100 text-black text-xs font-medium hover:bg-neutral-200 transition-all border border-[#E7E5E2] cursor-pointer"
-              >
-                Set Current City Manually
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPermissionDialog(false)}
-                className="w-full text-xs text-[#6F6F6F] hover:text-black py-2 cursor-pointer"
-              >
-                Cancel
+                Retry Map
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Large Minimal Map Canvas */}
-      <div className="relative bg-[#FAF8F5] border border-[#E7E5E2] rounded-[32px] overflow-hidden p-6 sm:p-10 shadow-sm min-h-[480px] sm:min-h-[540px] flex flex-col justify-between">
-        {/* Subtle Map Grid Backdrop */}
-        <div
-          className="absolute inset-0 opacity-[0.4] pointer-events-none"
-          style={{
-            backgroundImage: `radial-gradient(#000000 0.8px, transparent 0.8px)`,
-            backgroundSize: '28px 28px',
-          }}
-        />
-
-        {/* Top Floating Map Controls */}
-        <div className="relative z-20 flex items-center justify-between gap-4">
-          {/* User Current Location Indicator */}
-          <div className="flex items-center gap-2.5 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-[#E7E5E2] shadow-xs">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <span className="font-mono text-xs text-[#000000] font-semibold">
-              YOU ARE HERE:
-            </span>
-            <span className="font-inter text-xs text-[#6F6F6F]">{userLocationName}</span>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-[11px] font-mono uppercase bg-white/80 px-3 py-1.5 rounded-full text-[#6F6F6F] border border-[#E7E5E2]">
-              Route Progress: 3 of 5 Done
-            </span>
-          </div>
-        </div>
-
-        {/* Central Map Path & Nodes SVG */}
-        <div className="relative w-full h-[280px] sm:h-[340px] my-4 flex items-center justify-center">
-          <svg
-            className="absolute inset-0 w-full h-full text-neutral-300 pointer-events-none"
-            viewBox="0 0 800 400"
-            fill="none"
-          >
-            {/* Subtle shoreline / coastal curve */}
-            <path
-              d="M 120 380 Q 200 280 320 230 T 560 140 T 740 60"
-              stroke="#E7E5E2"
-              strokeWidth="1.5"
-              strokeDasharray="4 4"
-            />
-            {/* Active route connecting the 5 stops */}
-            <path
-              d="M 192 280 L 304 184 L 400 248 L 544 152 L 656 100"
-              stroke="#000000"
-              strokeWidth="2"
-              strokeDasharray="5 5"
-            />
-            {/* User Pulse Circle */}
-            <circle cx="430" cy="230" r="16" fill="rgba(16, 185, 129, 0.15)" />
-            <circle cx="430" cy="230" r="6" fill="#10B981" />
-          </svg>
-
-          {/* User Location Marker */}
-          <div
-            className="absolute z-30 -translate-x-1/2 -translate-y-1/2 cursor-default"
-            style={{ left: '54%', top: '58%' }}
-          >
-            <div className="flex flex-col items-center">
-              <div className="px-2.5 py-1 rounded-full bg-[#000000] text-white text-[10px] font-mono tracking-wider shadow-lg mb-1 whitespace-nowrap flex items-center gap-1">
-                <Navigation className="w-2.5 h-2.5 text-emerald-400 fill-emerald-400" />
-                <span>You (Panaji)</span>
+          {/* Real Live Geocoded "YOU ARE HERE" Banner Overlay */}
+          {userLocation && (
+            <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-md border border-[#E7E5E2] rounded-2xl px-3.5 py-2 shadow-xs flex items-center gap-2.5 max-w-[85%] sm:max-w-sm">
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping shrink-0" />
+              <div className="text-left overflow-hidden">
+                <span className="text-[9px] font-mono uppercase text-neutral-500 tracking-wider block">YOU ARE HERE</span>
+                <span className="text-xs font-inter font-semibold text-black truncate block">
+                  {userAddress || `${userLocation.lat.toFixed(4)}°, ${userLocation.lng.toFixed(4)}°`}
+                </span>
               </div>
-              <div className="w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-white shadow-md animate-pulse" />
             </div>
-          </div>
+          )}
 
-          {/* Interactive Waypoints */}
-          {TODAY_WAYPOINTS.map((wp) => {
-            const isSelected = activeWaypoint.id === wp.id;
-            return (
-              <div
-                key={wp.id}
-                style={{
-                  top: `${wp.yPercent}%`,
-                  left: `${wp.xPercent}%`,
-                }}
-                onClick={() => setActiveWaypoint(wp)}
-                className="absolute -translate-x-1/2 -translate-y-1/2 z-20 cursor-pointer group"
-              >
-                <div
-                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    isSelected
-                      ? 'bg-[#000000] text-white scale-125 shadow-xl ring-4 ring-black/10'
-                      : wp.status === 'completed'
-                      ? 'bg-neutral-200 text-neutral-600 border border-neutral-300'
-                      : 'bg-white text-[#000000] border border-[#E7E5E2] hover:border-black hover:scale-110'
-                  }`}
-                >
-                  {wp.status === 'completed' ? (
-                    <Check className="w-3.5 h-3.5" />
-                  ) : (
-                    <MapPin className="w-3.5 h-3.5" />
-                  )}
-                </div>
-
-                <div
-                  className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono whitespace-nowrap transition-colors ${
-                    isSelected
-                      ? 'bg-[#000000] text-white font-medium shadow-sm'
-                      : 'bg-white/90 text-[#6F6F6F] group-hover:text-black border border-[#E7E5E2]'
-                  }`}
-                >
-                  {wp.time} · {wp.name.split(' ')[0]}
-                </div>
+          {/* Permission Denied Banner Overlay */}
+          {permissionDenied && (
+            <div className="absolute bottom-4 left-4 right-4 z-10 bg-amber-50/95 border border-amber-200 rounded-2xl p-3 shadow-xs flex items-center justify-between text-xs text-amber-900 font-inter">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Enable location permissions in browser settings to view your live GPS position.</span>
               </div>
-            );
-          })}
+              <button
+                type="button"
+                onClick={startWatchingLocation}
+                className="ml-2 px-3 py-1 bg-amber-900 text-white rounded-full text-[11px] font-mono shrink-0 hover:bg-black transition-colors"
+              >
+                Enable
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Bottom Waypoint Dossier Card */}
-        <div className="relative z-20 bg-white/95 backdrop-blur-md border border-[#E7E5E2] rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono text-[#6F6F6F] mb-1">
-              <span>{activeWaypoint.time} SCHEDULED STOP</span>
-              <span>•</span>
-              <span className="text-[#000000] font-semibold">{activeWaypoint.category}</span>
+        {/* Bottom Details & Next Stop Split Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* Left Column: Real Route Progress & Stops List */}
+          <div className="lg:col-span-6 bg-[#FAF8F5] border border-[#E7E5E2] rounded-2xl p-5 flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E7E5E2]">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">ITINERARY WAYPOINTS</span>
+                <h4 className="font-instrument text-xl text-black">
+                  Route progress {totalStops > 0 ? `${completedCount} of ${totalStops} done` : 'No stops set'}
+                </h4>
+              </div>
+              {totalStops > 0 && (
+                <span className="text-xs font-mono font-bold bg-white border border-neutral-200 px-2.5 py-1 rounded-full">
+                  {Math.round((completedCount / totalStops) * 100)}%
+                </span>
+              )}
             </div>
-            <h4 className="font-instrument text-2xl sm:text-3xl text-[#000000] leading-none">
-              {activeWaypoint.name}
-            </h4>
-            <p className="text-xs text-[#6F6F6F] font-inter mt-1">
-              {activeWaypoint.distance} · Estimated travel time {activeWaypoint.eta}
-            </p>
+
+            {/* Stops Checklist */}
+            {stops.length > 0 ? (
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {stops.map((stop, i) => {
+                  const isDone = completedStopIds.has(stop.id);
+                  const isCurrent = nextStop?.id === stop.id;
+
+                  return (
+                    <div
+                      key={stop.id}
+                      onClick={() => handleToggleStop(stop.id)}
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                        isCurrent
+                          ? 'bg-white border-black shadow-xs ring-1 ring-black'
+                          : isDone
+                          ? 'bg-neutral-100/70 border-neutral-200 opacity-60'
+                          : 'bg-white border-[#E7E5E2] hover:border-neutral-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold shrink-0 ${
+                            isDone
+                              ? 'bg-emerald-600 text-white'
+                              : isCurrent
+                              ? 'bg-black text-white'
+                              : 'bg-neutral-100 text-neutral-700'
+                          }`}
+                        >
+                          {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : i + 1}
+                        </div>
+                        <span className={`text-xs font-inter line-clamp-1 ${isDone ? 'line-through text-neutral-500' : 'text-black font-medium'}`}>
+                          {stop.name}
+                        </span>
+                      </div>
+
+                      {isCurrent && (
+                        <span className="text-[10px] font-mono bg-black text-white px-2 py-0.5 rounded uppercase shrink-0">
+                          Next Up
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-neutral-500 font-inter text-xs">
+                <Compass className="w-7 h-7 mx-auto mb-2 text-neutral-400" />
+                Add stops to your active itinerary to visualize your live route and waypoints here.
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleOpenDirections}
-              className="flex items-center gap-1.5 rounded-full px-6 py-2.5 bg-[#000000] text-white text-xs font-medium hover:bg-neutral-800 transition-all hover:scale-[1.02] cursor-pointer shadow-md"
-            >
-              <Navigation className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Get Directions</span>
-            </button>
+          {/* Right Column: Next Stop Card with Real Distance & Directions */}
+          <div className="lg:col-span-6 bg-white border border-[#E7E5E2] rounded-2xl p-5 flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+                  NEXT TARGET WAYPOINT
+                </span>
+                {routeInfo && (
+                  <span className="text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    {routeInfo.distanceText} · {routeInfo.durationText}
+                  </span>
+                )}
+              </div>
+
+              <h3 className="font-instrument text-2xl sm:text-3xl text-black mb-1">
+                {nextStop ? nextStop.name : 'All waypoints completed'}
+              </h3>
+
+              <p className="text-xs text-neutral-600 font-inter">
+                {nextStop
+                  ? 'Real-time navigation enabled via Google Maps Directions API.'
+                  : 'You have reached or checked off all scheduled waypoints for today.'}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-3 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs font-mono text-neutral-500">
+                <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Live GPS Sync</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {onRequestRide && nextStop && (
+                  <button
+                    type="button"
+                    onClick={() => onRequestRide(nextStop.name)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-neutral-300 hover:border-black text-xs font-mono text-black transition-colors cursor-pointer bg-white"
+                  >
+                    <Car className="w-3.5 h-3.5" />
+                    <span>Get Ride</span>
+                  </button>
+                )}
+
+                {nextStop && (
+                  <a
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-black text-white text-xs font-mono hover:bg-neutral-800 transition-all shadow-xs"
+                  >
+                    <span>Get Directions</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Turn-by-Turn Navigation & Direction Modal */}
-      {isDirectionsModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-fade-rise">
-          <div className="fixed inset-0 -z-10" onClick={() => setIsDirectionsModalOpen(false)} />
-          <div className="bg-white border border-[#E7E5E2] rounded-[32px] max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl relative my-auto">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-[#E7E5E2] bg-[#FAF8F5] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center">
-                  <Navigation className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#6F6F6F]">
-                    NAVIGATION HUD · {activeWaypoint.distance}
-                  </span>
-                  <h3 className="font-instrument text-2xl sm:text-3xl text-black leading-tight">
-                    Route to {activeWaypoint.name}
-                  </h3>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsDirectionsModalOpen(false)}
-                className="p-2 rounded-full text-[#6F6F6F] hover:text-black hover:bg-neutral-200/50 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
-              {/* Route Summary Box */}
-              <div className="p-4 bg-[#FAF8F5] border border-[#E7E5E2] rounded-2xl flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-mono uppercase text-[#6F6F6F] block">Drive ETA</span>
-                  <span className="font-instrument text-3xl text-black leading-none">{activeWaypoint.eta}</span>
-                  <span className="text-xs text-[#6F6F6F] font-inter mt-0.5 block">via Aguada-Candolim Rd</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-mono uppercase text-[#6F6F6F] block">Distance</span>
-                  <span className="font-instrument text-3xl text-black leading-none">{activeWaypoint.distance}</span>
-                  <span className="text-xs text-emerald-700 font-mono mt-0.5 block">Light Traffic</span>
-                </div>
-              </div>
-
-              {/* Turn-by-Turn Steps */}
-              <div>
-                <span className="text-xs font-mono uppercase text-[#6F6F6F] block mb-3">
-                  TURN-BY-TURN GUIDANCE
-                </span>
-                <div className="space-y-3">
-                  {activeWaypoint.steps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 bg-white border border-[#E7E5E2] rounded-xl flex items-start gap-3 text-xs text-black font-inter leading-relaxed"
-                    >
-                      <span className="w-5 h-5 rounded-full bg-neutral-100 font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                        {idx + 1}
-                      </span>
-                      <span>{step}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions Grid */}
-              <div className="pt-2 space-y-3">
-                <button
-                  type="button"
-                  onClick={handleOpenGoogleMaps}
-                  className="w-full rounded-full py-4 bg-black text-white text-sm font-medium hover:bg-neutral-800 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                >
-                  <span>Launch in Google Maps Navigation</span>
-                  <ExternalLink className="w-4 h-4" />
-                </button>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsDirectionsModalOpen(false);
-                      if (onRequestRide) onRequestRide(activeWaypoint.name);
-                    }}
-                    className="flex-1 rounded-full py-3 bg-neutral-100 hover:bg-neutral-200 text-black text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#E7E5E2]"
-                  >
-                    <Car className="w-3.5 h-3.5" />
-                    <span>Book Ride Instead</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleCopyCoords}
-                    className="rounded-full px-4 py-3 bg-neutral-100 hover:bg-neutral-200 text-black text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer border border-[#E7E5E2]"
-                    title="Copy GPS coordinates"
-                  >
-                    {copiedCoords ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedCoords ? 'Copied' : 'GPS'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };

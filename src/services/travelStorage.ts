@@ -1,11 +1,138 @@
 import { DestinationInfo } from './destinations';
 
+export type CollaboratorRole = 'owner' | 'editor' | 'viewer';
+
+export interface JourneyCollaborator {
+  id: string;
+  name: string;
+  email: string;
+  role: CollaboratorRole;
+  avatar?: string;
+  joinedAt: string;
+  status: 'active' | 'invited';
+}
+
+export type ExpenseCategory =
+  | 'transport'
+  | 'accommodation'
+  | 'food'
+  | 'activities'
+  | 'shopping'
+  | 'rentals'
+  | 'emergency'
+  | 'other';
+
+export interface JourneyExpense {
+  id: string;
+  title?: string;
+  description?: string;
+  amount: number;
+  category: ExpenseCategory | string;
+  date: string;
+  paidBy?: string;
+  splitAmong?: string[];
+  notes?: string;
+}
+
+export interface JourneyBudgetPlanner {
+  totalBudget: number;
+  currency: string;
+  travelersCount: number;
+  categories: Record<ExpenseCategory, number>;
+  expenses: JourneyExpense[];
+}
+
+export type BookingType = 'flight' | 'train' | 'bus' | 'taxi' | 'hotel' | 'activity';
+
+export interface StoredBooking {
+  id: string;
+  type: BookingType;
+  title: string;
+  provider: string;
+  bookingReference?: string;
+  route: string;
+  departureDate: string;
+  returnDate?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  cost: number;
+  currency: string;
+  status: 'confirmed' | 'pending' | 'saved';
+  bookingUrl?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export type PlaceCategory = 'hotel' | 'hostel' | 'resort' | 'club' | 'shopping' | 'restaurant' | 'activity';
+
+export interface SavedPlace {
+  id: string;
+  name: string;
+  category: PlaceCategory;
+  city?: string;
+  address: string;
+  rating?: number;
+  priceLevel?: number | '$' | '$$' | '$$$' | '$$$$';
+  image?: string;
+  lat?: number;
+  lng?: number;
+  distance?: string;
+  openingHours?: string;
+  bookingUrl?: string;
+  phone?: string;
+  website?: string;
+  savedAt?: string;
+  notes?: string;
+}
+
+export interface NearbyHospital {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distanceKm: number;
+  rating?: number;
+  isOpen?: boolean;
+  phone?: string;
+  emergency?: boolean;
+}
+
+export type NotificationType = 'trip' | 'weather' | 'budget' | 'flight' | 'train' | 'collaborator' | 'reminder' | 'emergency' | 'departure';
+
+export interface StoredNotification {
+  id: string;
+  journeyId?: string;
+  title: string;
+  message: string;
+  type?: NotificationType;
+  createdAt: string;
+  read: boolean;
+  actionUrl?: string;
+}
+
+export interface JourneyShareSettings {
+  isPublic: boolean;
+  shareToken: string;
+  allowedSections: {
+    itinerary: boolean;
+    dates: boolean;
+    budget: boolean;
+    hotels: boolean;
+    transport: boolean;
+    activities: boolean;
+    bookings: boolean;
+    notes: boolean;
+    collaborators: boolean;
+  };
+}
+
 export interface ActivityItem {
   id: string;
   name: string;
-  startTime: string; // "HH:MM" e.g., "09:00"
-  endTime: string;   // "HH:MM" e.g., "10:30"
-  location: string;
+  startTime?: string; // "HH:MM" e.g., "09:00"
+  endTime?: string;   // "HH:MM" e.g., "10:30"
+  location?: string;
   cost?: number;
   description?: string;
 }
@@ -16,7 +143,7 @@ export interface ItineraryDay {
   dayNumber: number;
   date: string; // e.g. "12 Jun" or "Day 1"
   city: string;
-  activities: any[];
+  activities: Array<string | ActivityItem>;
 }
 
 export interface StoredJourney {
@@ -29,9 +156,10 @@ export interface StoredJourney {
   travelers: number; // For compatibility
   style: string; // For compatibility
   createdAt: string;
+  updatedAt?: string;
   status: 'Planning' | 'Upcoming' | 'Completed';
   
-  // Expanded fields for the "Plan a New Journey" flow
+  // Expanded unified data fields
   destinations?: DestinationInfo[];
   startDate?: string;
   endDate?: string;
@@ -44,19 +172,26 @@ export interface StoredJourney {
     amount: number | null;
     label: string; // e.g. "₹50,000" or "I'll decide later"
   };
+  budgetPlanner?: JourneyBudgetPlanner;
   interests?: string[];
   pace?: string;
   travelType?: 'friends' | 'family' | 'solo';
+  collaborators?: JourneyCollaborator[];
   members?: Array<{ id: string; name: string; role?: string }>;
-  expenses?: any[];
+  expenses?: JourneyExpense[];
   itinerary?: ItineraryDay[];
   coverImage?: string;
   transportation?: StoredTransportItem[];
+  bookings?: StoredBooking[];
+  savedPlaces?: SavedPlace[];
+  notifications?: StoredNotification[];
+  shareSettings?: JourneyShareSettings;
+  notes?: string;
 }
 
 export interface StoredTransportItem {
   id: string;
-  type: 'bike' | 'flight';
+  type: 'bike' | 'flight' | 'train' | 'car' | 'bus' | 'taxi';
   title: string;
   subtitle: string;
   route: string;
@@ -64,14 +199,7 @@ export interface StoredTransportItem {
   cost: string;
   details: string;
   createdAt: string;
-}
-
-export interface StoredNotification {
-  id: string;
-  title: string;
-  message: string;
-  createdAt: string;
-  read: boolean;
+  bookingUrl?: string;
 }
 
 export interface JournalEntry {
@@ -96,6 +224,10 @@ export interface UserProfile {
   savedDestinations: string[];
   currency: string;
   language: string;
+  // Sensitive profile field with strict privacy defaults
+  religion?: string;
+  religionPrivate?: boolean;
+  allowReligiousRecommendations?: boolean;
 }
 
 const JOURNEYS_KEY = 'aethera.journeys';
@@ -114,6 +246,9 @@ const DEFAULT_PROFILE: UserProfile = {
   savedDestinations: ['Goa', 'Ladakh', 'Kyoto', 'Amalfi Coast', 'Zermatt', 'Udaipur'],
   currency: 'INR (₹)',
   language: 'English',
+  religion: 'Prefer not to say',
+  religionPrivate: true,
+  allowReligiousRecommendations: false,
 };
 
 const DEFAULT_JOURNAL_ENTRIES: JournalEntry[] = [
@@ -137,23 +272,73 @@ const DEFAULT_JOURNAL_ENTRIES: JournalEntry[] = [
     image: 'https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?q=80&w=800&auto=format&fit=crop',
     tags: ['Ladakh', 'Monasteries', 'Mountains'],
   },
-  {
-    id: 'j3',
-    title: 'The Art Deco Facades of Oval Maidan',
-    location: 'South Mumbai',
-    date: '18 March 2026',
-    excerpt: 'A seamless transition from Victorian Gothic spires to 1930s nautical streamlined balconies along Maharshi Karve Road.',
-    content: 'Mumbai dusk along the perimeter of the Oval Maidan. On one side, the Victorian clock tower casts long shadows across cricket pitches; on the other, the second largest collection of Art Deco apartment blocks in the world begins to glow.',
-    image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?q=80&w=800&auto=format&fit=crop',
-    tags: ['Mumbai', 'Art Deco', 'Heritage'],
-  },
 ];
 
 const normalizeJourney = (j: any): StoredJourney => {
-  if (!j.itinerary) return j;
+  if (!j) return j;
+  
+  const totalBudgetValue = j.budgetValue?.amount ?? (typeof j.budget === 'number' ? j.budget : 50000);
+  const currencySymbol = '₹';
+
+  // Ensure budget planner exists
+  const budgetPlanner: JourneyBudgetPlanner = j.budgetPlanner || {
+    totalBudget: totalBudgetValue,
+    currency: currencySymbol,
+    travelersCount: j.travelers || 2,
+    categories: {
+      transport: Math.round(totalBudgetValue * 0.25),
+      accommodation: Math.round(totalBudgetValue * 0.35),
+      food: Math.round(totalBudgetValue * 0.18),
+      activities: Math.round(totalBudgetValue * 0.12),
+      shopping: Math.round(totalBudgetValue * 0.05),
+      rentals: 0,
+      emergency: Math.round(totalBudgetValue * 0.05),
+      other: 0,
+    },
+    expenses: j.expenses || [],
+  };
+
+  // Ensure default collaborators include owner
+  const collaborators: JourneyCollaborator[] = j.collaborators && j.collaborators.length > 0
+    ? j.collaborators
+    : [
+        {
+          id: 'collab_owner',
+          name: 'You (Owner)',
+          email: 'you@aethera.travel',
+          role: 'owner',
+          avatar: 'Y',
+          joinedAt: j.createdAt || new Date().toISOString(),
+          status: 'active',
+        },
+      ];
+
+  // Ensure share settings
+  const shareSettings: JourneyShareSettings = j.shareSettings || {
+    isPublic: false,
+    shareToken: crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : `share_${Date.now().toString(36)}`,
+    allowedSections: {
+      itinerary: true,
+      dates: true,
+      budget: false,
+      hotels: true,
+      transport: true,
+      activities: true,
+      bookings: false,
+      notes: false,
+      collaborators: false,
+    },
+  };
+
   return {
     ...j,
-    itinerary: j.itinerary.map((day: any) => ({
+    budgetPlanner,
+    collaborators,
+    shareSettings,
+    bookings: j.bookings || [],
+    savedPlaces: j.savedPlaces || [],
+    notifications: j.notifications || [],
+    itinerary: (j.itinerary || []).map((day: any) => ({
       ...day,
       activities: (day.activities || []).map((act: any) => {
         if (typeof act === 'string') {
@@ -164,7 +349,7 @@ const normalizeJourney = (j: any): StoredJourney => {
             endTime: '10:30',
             location: day.city || '',
             description: '',
-            cost: 0
+            cost: 0,
           };
         }
         return {
@@ -174,10 +359,10 @@ const normalizeJourney = (j: any): StoredJourney => {
           endTime: act.endTime || '10:30',
           location: act.location || day.city || '',
           description: act.description || '',
-          cost: typeof act.cost === 'number' ? act.cost : 0
+          cost: typeof act.cost === 'number' ? act.cost : 0,
         };
-      })
-    }))
+      }),
+    })),
   };
 };
 
@@ -197,7 +382,6 @@ const write = <T,>(key: string, value: T) => {
 export const travelStorage = {
   getJourneys: (): StoredJourney[] => {
     const raw = read<StoredJourney[]>(JOURNEYS_KEY, []);
-    // Filter out old fake/demo seeded mock journeys (e.g. mock ID '1', '2', '3', '4' or hardcoded mock 'GOA · MUMBAI · DELHI')
     const valid = raw.filter(
       (j) =>
         j &&
@@ -216,13 +400,17 @@ export const travelStorage = {
   },
   saveJourney: (journey: StoredJourney) => {
     const journeys = travelStorage.getJourneys();
+    const updatedJourney: StoredJourney = {
+      ...journey,
+      updatedAt: new Date().toISOString(),
+    };
     const existsIndex = journeys.findIndex((j) => j.id === journey.id);
     let updated: StoredJourney[];
     if (existsIndex > -1) {
-      journeys[existsIndex] = journey;
+      journeys[existsIndex] = updatedJourney;
       updated = journeys;
     } else {
-      updated = [journey, ...journeys];
+      updated = [updatedJourney, ...journeys];
     }
     write(JOURNEYS_KEY, updated);
     if (typeof window !== 'undefined') {
@@ -246,6 +434,7 @@ export const travelStorage = {
       id: crypto.randomUUID ? crypto.randomUUID() : `journey_${Date.now()}`,
       destination: `${target.destination} (COPY)`,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       status: 'Planning',
     };
     travelStorage.saveJourney(duplicated);
@@ -278,11 +467,42 @@ export const travelStorage = {
   },
   saveProfile: (profile: UserProfile) => {
     write(PROFILE_KEY, profile);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aethera:profile_updated', { detail: profile }));
+    }
   },
-  getNotifications: (): StoredNotification[] => read<StoredNotification[]>(NOTIFICATIONS_KEY, []),
+  getNotifications: (journeyId?: string): StoredNotification[] => {
+    const all = read<StoredNotification[]>(NOTIFICATIONS_KEY, []);
+    if (!journeyId) return all;
+    return all.filter((n) => !n.journeyId || n.journeyId === journeyId);
+  },
   addNotification: (notification: StoredNotification) => {
-    const notifications = travelStorage.getNotifications();
-    write(NOTIFICATIONS_KEY, [notification, ...notifications]);
+    const notifications = read<StoredNotification[]>(NOTIFICATIONS_KEY, []);
+    const updated = [notification, ...notifications];
+    write(NOTIFICATIONS_KEY, updated);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aethera:notifications_updated', { detail: updated }));
+    }
+  },
+  markNotificationAsRead: (id: string) => {
+    const notifications = read<StoredNotification[]>(NOTIFICATIONS_KEY, []);
+    const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+    write(NOTIFICATIONS_KEY, updated);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aethera:notifications_updated', { detail: updated }));
+    }
+  },
+  clearNotifications: (journeyId?: string) => {
+    if (journeyId) {
+      const notifications = read<StoredNotification[]>(NOTIFICATIONS_KEY, []);
+      const updated = notifications.filter((n) => n.journeyId !== journeyId);
+      write(NOTIFICATIONS_KEY, updated);
+    } else {
+      write(NOTIFICATIONS_KEY, []);
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aethera:notifications_updated', { detail: [] }));
+    }
   },
   addTransportToJourney: (journeyId: string, item: StoredTransportItem) => {
     const journeys = travelStorage.getJourneys();
@@ -293,8 +513,35 @@ export const travelStorage = {
       travelStorage.saveJourney(target);
     }
   },
+  addBookingToJourney: (journeyId: string, booking: StoredBooking) => {
+    const journeys = travelStorage.getJourneys();
+    const target = journeys.find((j) => j.id === journeyId);
+    if (target) {
+      const existing = target.bookings || [];
+      target.bookings = [booking, ...existing];
+      travelStorage.saveJourney(target);
+    }
+  },
+  addSavedPlaceToJourney: (journeyId: string, place: SavedPlace) => {
+    const journeys = travelStorage.getJourneys();
+    const target = journeys.find((j) => j.id === journeyId);
+    if (target) {
+      const existing = target.savedPlaces || [];
+      if (!existing.some((p) => p.id === place.id || p.name === place.name)) {
+        target.savedPlaces = [place, ...existing];
+        travelStorage.saveJourney(target);
+      }
+    }
+  },
+  removeSavedPlaceFromJourney: (journeyId: string, placeId: string) => {
+    const journeys = travelStorage.getJourneys();
+    const target = journeys.find((j) => j.id === journeyId);
+    if (target && target.savedPlaces) {
+      target.savedPlaces = target.savedPlaces.filter((p) => p.id !== placeId);
+      travelStorage.saveJourney(target);
+    }
+  },
   clearSession: () => {
-    // Session logout: reset current user session tokens
     window.localStorage.removeItem('aethera.auth_token');
     window.localStorage.removeItem('aethera.session');
   },
