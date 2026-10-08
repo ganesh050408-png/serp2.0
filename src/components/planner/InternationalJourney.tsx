@@ -124,8 +124,7 @@ export const InternationalJourney: React.FC<InternationalJourneyProps> = ({
             }}
             className="font-instrument italic text-2xl sm:text-3xl text-white inline-flex items-baseline"
           >
-            <span>Aethera</span>
-            <sup className="text-xs font-sans ml-0.5 relative -top-3">°</sup>
+            <span>Adhira</span>
             <span className="text-xs font-mono uppercase tracking-widest text-white/60 ml-3">
               / INTERNATIONAL
             </span>
@@ -266,7 +265,7 @@ export const InternationalJourney: React.FC<InternationalJourneyProps> = ({
         <div className="hidden lg:flex items-center gap-6 text-xs text-white/60 font-mono">
           <span>Global Expedition Studio</span>
           <span>•</span>
-          <span>Aethera Worldwide</span>
+          <span>Adhira Worldwide</span>
         </div>
       </footer>
     </section>

@@ -39,7 +39,7 @@ export const AIPlannerSection = ({ onOpenPlan }: AIPlannerSectionProps) => {
             text: `Please generate an editorial travel plan based on this request: "${prompt}". Format with a 2-sentence summary and 3 distinct segment highlights.`,
           },
         ],
-        'Editorial travel synthesis mode for Aethera luxury travel assistant.'
+        'Editorial travel synthesis mode for Adhira travel assistant.'
       );
 
       // Parse lines or highlights
@@ -64,7 +64,7 @@ export const AIPlannerSection = ({ onOpenPlan }: AIPlannerSectionProps) => {
     } catch (error) {
       setGeneratedPlan(null);
       setGenerationError(
-        error instanceof Error ? error.message : 'Aethera AI is temporarily unavailable. Please try again later.'
+        error instanceof Error ? error.message : 'Adhira Assistant is temporarily unavailable. Please try again later.'
       );
     } finally {
       setIsGenerating(false);
@@ -85,7 +85,7 @@ export const AIPlannerSection = ({ onOpenPlan }: AIPlannerSectionProps) => {
               Let AI plan the details.
             </h2>
             <p className="font-inter text-sm sm:text-base text-[#6F6F6F] mt-4 max-w-2xl mx-auto leading-relaxed">
-              Give us your destination, dates, budget, and travel style. Aethera creates a
+              Give us your destination, dates, budget, and travel style. Adhira creates a
               personalized itinerary that you can change at any time.
             </p>
           </div>

@@ -170,8 +170,7 @@ export const DashboardNavbar = ({
             }}
             className="font-instrument text-2xl sm:text-[28px] tracking-tight text-[#000000] select-none hover:opacity-80 transition-opacity inline-flex items-baseline"
           >
-            <span>Aethera</span>
-            <sup className="text-xs font-sans ml-0.5 relative -top-3">°</sup>
+            <span>Adhira</span>
           </a>
 
           {/* Subtle separator between brand and mode status */}

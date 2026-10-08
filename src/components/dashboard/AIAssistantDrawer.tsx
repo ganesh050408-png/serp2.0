@@ -86,7 +86,7 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
         ...prev,
         {
           sender: 'ai',
-          text: error instanceof Error ? error.message : 'Aethera AI is temporarily unavailable. Please try again later.',
+          text: error instanceof Error ? error.message : 'Adhira Assistant is temporarily unavailable. Please try again later.',
         },
       ]);
     } finally {
@@ -115,10 +115,10 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
           type="button"
           onClick={onOpen}
           className="fixed bottom-7 right-7 z-50 flex items-center gap-2.5 rounded-full px-5 py-3.5 bg-[#000000] text-white shadow-2xl hover:scale-[1.04] active:scale-[0.98] transition-all duration-300 ai-pulse-button cursor-pointer"
-          aria-label="Open Aethera AI Assistant"
+          aria-label="Open Adhira Assistant"
         >
           <Sparkles className="w-4 h-4 text-white" />
-          <span className="font-medium text-xs sm:text-sm font-sans tracking-wide">✦ Aethera AI</span>
+          <span className="font-medium text-xs sm:text-sm font-sans tracking-wide">✦ Adhira</span>
         </button>
       )}
 
@@ -132,9 +132,9 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
                 ✦
               </div>
               <div>
-                <h3 className="font-instrument text-2xl text-[#000000] leading-none">Aethera AI</h3>
+                <h3 className="font-instrument text-2xl text-[#000000] leading-none">Adhira</h3>
                 <p className="text-[11px] text-[#6F6F6F] font-inter mt-0.5">
-                  Powered by Claude 3.5 Sonnet Intelligent Curation
+                  Intelligent Travel Assistant
                 </p>
               </div>
             </div>
@@ -203,7 +203,7 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
             {isLoading && (
               <div className="flex items-center gap-2 text-xs font-mono text-[#6F6F6F] p-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />
-                <span>Aethera AI is synthesizing thoughts...</span>
+                <span>Adhira is synthesizing thoughts...</span>
               </div>
             )}
           </div>
@@ -220,7 +220,7 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Ask Aethera AI (e.g. Make tomorrow cheaper)..."
+              placeholder="Ask Adhira (e.g. Make tomorrow cheaper)..."
               disabled={isLoading}
               className="flex-1 bg-white border border-[#E7E5E2] rounded-full px-4 py-2.5 text-xs sm:text-sm text-[#000000] placeholder:text-neutral-400 focus:outline-none focus:border-black disabled:opacity-60"
             />

@@ -145,7 +145,7 @@ export const CurrentJourneyCard = ({
             <p className="text-sm text-[#6F6F6F] leading-relaxed mb-6 font-inter">
               {journey.style
                 ? `A bespoke voyage exploring ${journey.style.toLowerCase()} and customized daily excursions.`
-                : 'An editorial travel itinerary curated through Aethera private travel studio.'}
+                : 'An editorial travel itinerary curated through Adhira private travel studio.'}
             </p>
 
             {/* Key Trip Metrics Grid */}

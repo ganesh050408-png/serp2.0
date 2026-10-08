@@ -280,7 +280,7 @@ export const HospitalsPage: React.FC<HospitalsPageProps> = ({
           </button>
           <div className="h-4 w-px bg-neutral-200" />
           <div className="flex items-center gap-2">
-            <span className="font-instrument text-2xl tracking-tight text-black">Aethera</span>
+            <span className="font-instrument text-2xl tracking-tight text-black">Adhira</span>
             <span className="text-[11px] font-mono text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">
               Hospitals Near Me
             </span>

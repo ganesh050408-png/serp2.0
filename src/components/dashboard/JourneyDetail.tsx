@@ -168,7 +168,7 @@ export const JourneyDetail: React.FC<JourneyDetailProps> = ({ journeyId, onNavig
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center font-sans">
         <div className="max-w-md w-full space-y-6">
           <span className="text-xs font-mono uppercase tracking-widest text-[#6F6F6F]">
-            AETHERA GLOBAL ARCHIVE
+            ADHIRA GLOBAL ARCHIVE
           </span>
           <h2 className="font-instrument text-4xl sm:text-5xl text-black leading-tight">
             Explore Destinations

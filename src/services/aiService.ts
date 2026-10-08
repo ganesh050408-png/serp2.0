@@ -1,7 +1,7 @@
 // Aethera AI Service
 // Provider credentials are kept by the server-side API proxy.
 
-const GENERIC_AI_ERROR = 'Aethera AI is temporarily unavailable. Please try again later.';
+const GENERIC_AI_ERROR = 'Adhira Assistant is temporarily unavailable. Please try again later.';
 
 class AIServiceError extends Error {
   constructor(message: string) {
@@ -24,7 +24,7 @@ export const callAetheraAI = async (
     .map((m) => ({ ...m, text: m.text.trim() }));
 
   if (formattedMessages.length === 0) {
-    throw new AIServiceError('Please enter a message before asking Aethera AI.');
+    throw new AIServiceError('Please enter a message before asking Adhira.');
   }
 
   try {

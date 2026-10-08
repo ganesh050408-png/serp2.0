@@ -55,7 +55,7 @@ export const SmartTravelSuggestions = ({ onActionClick }: SmartTravelSuggestions
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="w-4 h-4 text-neutral-800" />
         <span className="text-xs font-mono uppercase tracking-wider text-[#6F6F6F]">
-          AETHERA PROACTIVE COMPANION INSIGHTS
+          ADHIRA PROACTIVE COMPANION INSIGHTS
         </span>
       </div>
 

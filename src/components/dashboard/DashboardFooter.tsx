@@ -12,11 +12,10 @@ export const DashboardFooter = ({ onBackToTop, onGoToLanding }: DashboardFooterP
         {/* Brand Statement */}
         <div className="text-center md:text-left">
           <div className="font-instrument text-3xl tracking-tight text-[#000000] inline-flex items-baseline mb-2">
-            <span>Aethera</span>
-            <sup className="text-xs font-sans ml-0.5 relative -top-3">°</sup>
+            <span>Adhira</span>
           </div>
           <p className="text-xs sm:text-sm text-[#6F6F6F] font-inter">
-            Aethera — Design your journey. The personal travel studio.
+            Adhira — Design your journey. The personal travel studio.
           </p>
         </div>
 
@@ -58,7 +57,7 @@ export const DashboardFooter = ({ onBackToTop, onGoToLanding }: DashboardFooterP
       </div>
 
       <div className="max-w-7xl mx-auto mt-10 pt-6 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-400 gap-4">
-        <span>© 2026 Aethera Global Travel Studio. All rights reserved.</span>
+        <span>© 2026 Adhira Global Travel Studio. All rights reserved.</span>
         <span>Curated with Instrument Serif & Inter.</span>
       </div>
     </footer>

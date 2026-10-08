@@ -198,7 +198,7 @@ export const TransportationStudio: React.FC<TransportationStudioProps> = ({
   const [flightSearchError, setFlightSearchError] = useState<string | null>(null);
   const [selectedFlight, setSelectedFlight] = useState<SanitizedFlight | null>(null);
   const [passengerName, setPassengerName] = useState('Traveler');
-  const [passengerEmail, setPassengerEmail] = useState('traveler@aethera.luxury');
+  const [passengerEmail, setPassengerEmail] = useState('traveler@adhira.travel');
 
   // Success toast notification state
   const [savedSuccessMsg, setSavedSuccessMsg] = useState<string | null>(null);

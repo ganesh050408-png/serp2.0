@@ -22,10 +22,9 @@ export const Navbar = ({ onBeginJourney }: NavbarProps) => {
         <a
           href="#"
           className="font-instrument text-3xl tracking-tight text-[#000000] select-none hover:opacity-85 transition-opacity inline-flex items-baseline"
-          aria-label="Aethera Home"
+          aria-label="Adhira Home"
         >
-          <span>Aethera</span>
-          <sup className="text-xs font-sans ml-0.5 relative -top-3">®</sup>
+          <span>Adhira</span>
         </a>
 
         {/* Desktop Navigation Menu */}

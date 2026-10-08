@@ -139,7 +139,7 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
 
   // Quick Demo Guest Fill
   const handleQuickDemo = () => {
-    setEmail('aravind.s@aethera.travel');
+    setEmail('aravind.s@adhira.travel');
     setPassword('secret123');
     setName('Aravind S.');
     setMode('signin');
@@ -202,8 +202,7 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
               <span className="hidden sm:inline">Back</span>
             </button>
             <span className="font-instrument text-2xl sm:text-3xl tracking-tight text-white select-none inline-flex items-baseline ml-2">
-              <span>Aethera</span>
-              <sup className="text-xs font-sans ml-0.5 relative -top-3">®</sup>
+              <span>Adhira</span>
             </span>
           </div>
 
@@ -253,10 +252,10 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
               {/* Brand Title */}
               <div className="text-center mb-8">
                 <span className="font-instrument text-4xl sm:text-5xl tracking-tight text-white block mb-2 leading-none">
-                  Aethera
+                  Adhira
                 </span>
                 <h3 className="font-instrument text-2xl text-white/95 font-normal">
-                  Welcome to Aethera
+                  Welcome to Adhira
                 </h3>
                 <p className="text-xs font-inter text-white/70 mt-1">
                   Begin your journey with us.
@@ -333,7 +332,7 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="aravind@aethera.travel"
+                      placeholder="aravind@adhira.travel"
                       required
                       className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white focus:bg-white/15 transition-all"
                     />
@@ -384,7 +383,7 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
               <div className="mt-6 pt-4 border-t border-white/10 text-center">
                 {mode === 'signin' ? (
                   <p className="text-xs text-white/70 font-inter">
-                    New to Aethera?{' '}
+                    New to Adhira?{' '}
                     <button
                       type="button"
                       onClick={() => {
@@ -421,7 +420,7 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
           <div className="flex items-center gap-3 text-xs text-white/60 font-mono">
             <span>Scenic Railway Voyage</span>
             <span>•</span>
-            <span>Aethera Authentication Engine</span>
+            <span>Adhira Authentication Engine</span>
           </div>
 
           <div className="hidden sm:flex items-center gap-2 text-xs text-white/40 font-mono">

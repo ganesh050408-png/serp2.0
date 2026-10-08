@@ -237,7 +237,7 @@ const PROFILE_KEY = 'aethera.profile';
 
 const DEFAULT_PROFILE: UserProfile = {
   name: 'Aravind S.',
-  email: 'aravind.s@aethera.travel',
+  email: 'aravind.s@adhira.travel',
   phone: '+91 98401 23456',
   avatar: 'A',
   bio: 'Architectural writer & slow travel curator based in Chennai. Exploring coastal sanctuaries and heritage corridors.',
@@ -305,7 +305,7 @@ const normalizeJourney = (j: any): StoredJourney => {
         {
           id: 'collab_owner',
           name: 'You (Owner)',
-          email: 'you@aethera.travel',
+          email: 'you@adhira.travel',
           role: 'owner',
           avatar: 'Y',
           joinedAt: j.createdAt || new Date().toISOString(),

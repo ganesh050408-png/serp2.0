@@ -99,8 +99,8 @@ export const JourneyShareModal: React.FC<JourneyShareModalProps> = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Aethera Journey: ${journey.destination}`,
-          text: `Check out our planned journey to ${journey.destination} on Aethera!`,
+          title: `Adhira Journey: ${journey.destination}`,
+          text: `Check out our planned journey to ${journey.destination} on Adhira!`,
           url: shareUrl,
         });
       } catch (err) {

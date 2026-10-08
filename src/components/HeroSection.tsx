@@ -13,14 +13,14 @@ export const HeroSection = ({ onBeginJourney }: HeroSectionProps) => {
           letterSpacing: '-2.46px',
         }}
       >
-        Beyond <span className="italic text-[#6F6F6F]">silence,</span> we build{' '}
-        <span className="italic text-[#6F6F6F]">the eternal.</span>
+        Plan every <span className="italic text-[#6F6F6F]">journey,</span> explore{' '}
+        <span className="italic text-[#6F6F6F]">every destination.</span>
       </h1>
 
       {/* Description */}
       <p className="font-inter text-base sm:text-lg max-w-2xl mt-8 leading-relaxed text-[#6F6F6F] animate-fade-rise-delay">
-        Building platforms for brilliant minds, fearless makers, and thoughtful souls.
-        Through the noise, we craft digital havens for deep work and pure flows.
+        Adhira brings destination discovery, day-by-day itineraries, and transit planning together in one clear space.
+        Organize your routes, schedule daily activities, and travel with confidence.
       </p>
 
       {/* Hero CTA Button */}

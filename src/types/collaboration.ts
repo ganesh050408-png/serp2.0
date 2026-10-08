@@ -104,7 +104,7 @@ export const DEMO_USERS: UserProfile[] = [
   {
     id: 'user_aravind',
     name: 'Aravind S.',
-    email: 'aravind@aethera.travel',
+    email: 'aravind@adhira.travel',
     username: 'aravind',
     initials: 'AS',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
@@ -112,7 +112,7 @@ export const DEMO_USERS: UserProfile[] = [
   {
     id: 'user_naitri',
     name: 'Naitri',
-    email: 'naitri@aethera.travel',
+    email: 'naitri@adhira.travel',
     username: 'naitri',
     initials: 'N',
     avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
@@ -120,7 +120,7 @@ export const DEMO_USERS: UserProfile[] = [
   {
     id: 'user_shubham',
     name: 'Shubham',
-    email: 'shubham@aethera.travel',
+    email: 'shubham@adhira.travel',
     username: 'shubham',
     initials: 'S',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
@@ -128,7 +128,7 @@ export const DEMO_USERS: UserProfile[] = [
   {
     id: 'user_meera',
     name: 'Meera K.',
-    email: 'meera@aethera.travel',
+    email: 'meera@adhira.travel',
     username: 'meera',
     initials: 'MK',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop',
