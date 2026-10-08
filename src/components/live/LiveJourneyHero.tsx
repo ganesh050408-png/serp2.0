@@ -1,20 +1,82 @@
+import React from 'react';
 import { MapPin, Navigation, Clock, Sun, Sparkles, ArrowRight } from 'lucide-react';
+import type { StoredJourney } from '../../services/travelStorage';
 
 interface LiveJourneyHeroProps {
+  journey: StoredJourney | null;
+  journeys?: StoredJourney[];
+  onSelectJourney?: (id: string) => void;
   onOpenMap: () => void;
   onOpenAI: () => void;
 }
 
-export const LiveJourneyHero = ({ onOpenMap, onOpenAI }: LiveJourneyHeroProps) => {
+export const LiveJourneyHero: React.FC<LiveJourneyHeroProps> = ({
+  journey,
+  journeys = [],
+  onSelectJourney,
+  onOpenMap,
+  onOpenAI,
+}) => {
+  // Extract dynamic details from current active journey
+  const journeyTitle =
+    journey?.destination ||
+    journey?.destinations?.map((d) => d.name || d.city).filter(Boolean).join(' · ') ||
+    'Your Active Journey';
+
+  const currentCity =
+    journey?.destinations?.[0]?.city ||
+    journey?.destinations?.[0]?.name ||
+    journey?.city ||
+    journey?.destination ||
+    'Current Destination';
+
+  const regionStyle = journey?.style
+    ? journey.style.toUpperCase()
+    : journey?.destinations?.[0]?.country
+    ? `${journey.destinations[0].country.toUpperCase()} SANCTUARY`
+    : 'BESPOKE TRAVEL CORRIDOR';
+
+  const totalDays = journey?.itinerary?.length || 5;
+
+  // Extract real next checkpoint from current journey's activities or attractions
+  const firstDay = journey?.itinerary?.[0];
+  const firstAct = firstDay?.activities?.[0];
+  const nextCheckpoint =
+    (typeof firstAct === 'string'
+      ? firstAct
+      : firstAct?.name) ||
+    journey?.destinations?.[0]?.attractions?.[0] ||
+    `Arrival & check-in at ${currentCity} haven`;
+
   return (
     <section className="relative z-10 w-full pt-8 sm:pt-12 pb-12 sm:pb-16 px-6 sm:px-8 max-w-7xl mx-auto">
-      {/* Top Active Status & Mode Indicator */}
+      {/* Top Active Status & Journey Switcher */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-xs font-mono text-emerald-900 animate-fade-rise">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold uppercase tracking-wider">LIVE JOURNEY</span>
-          <span className="text-emerald-300">•</span>
-          <span>DAY 4 OF 10</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-xs font-mono text-emerald-900 animate-fade-rise">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-semibold uppercase tracking-wider">LIVE JOURNEY</span>
+            <span className="text-emerald-300">•</span>
+            <span>DAY 1 OF {totalDays}</span>
+          </div>
+
+          {/* Quick Journey Switcher if multiple journeys exist */}
+          {journeys.length > 1 && (
+            <div className="flex items-center gap-1.5 bg-white border border-[#E7E5E2] rounded-full px-3 py-1 shadow-2xs">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#6F6F6F]">Trip:</span>
+              <select
+                value={journey?.id || ''}
+                onChange={(e) => onSelectJourney?.(e.target.value)}
+                className="bg-transparent text-xs font-mono font-medium text-black focus:outline-none cursor-pointer"
+              >
+                {journeys.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {j.destination || 'Journey'} ({j.itinerary?.length || 5}d)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Live Weather & Local Time */}
@@ -35,17 +97,17 @@ export const LiveJourneyHero = ({ onOpenMap, onOpenAI }: LiveJourneyHeroProps) =
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 pb-10 border-b border-[#E7E5E2]">
         <div className="max-w-3xl">
           <span className="text-xs uppercase tracking-widest font-mono text-[#6F6F6F] block mb-2">
-            ACTIVE REGION · WESTERN COAST
+            ACTIVE REGION · {regionStyle}
           </span>
           <h1
             className="font-instrument font-normal text-5xl sm:text-7xl md:text-8xl text-[#000000] tracking-headline leading-headline select-none animate-fade-rise"
             style={{ letterSpacing: '-2.46px', lineHeight: '0.95' }}
           >
-            Goa · Mumbai · Delhi
+            {journeyTitle}
           </h1>
           <p className="font-inter text-base sm:text-lg text-[#6F6F6F] mt-4 leading-relaxed max-w-2xl animate-fade-rise-delay">
-            You're currently in <strong className="text-[#000000] font-medium">Panaji, Goa</strong>.
-            Here is your live itinerary, nearby health & transit services, and real-time guidance.
+            You're currently exploring <strong className="text-[#000000] font-medium">{currentCity}</strong>.
+            Here is your live day itinerary, nearby health & transit services, and real-time guidance.
           </p>
         </div>
 
@@ -72,17 +134,17 @@ export const LiveJourneyHero = ({ onOpenMap, onOpenAI }: LiveJourneyHeroProps) =
             <div className="flex items-center gap-2 text-xs font-mono text-[#6F6F6F] uppercase">
               <span>Next Checkpoint</span>
               <span>•</span>
-              <span className="text-[#000000] font-semibold">15:30 (In 1 hr 15 min)</span>
+              <span className="text-[#000000] font-semibold">Today's Highlight</span>
             </div>
             <h3 className="font-instrument text-2xl sm:text-3xl text-[#000000] mt-0.5">
-              Fort Aguada & Lighthouse Promontory
+              {nextCheckpoint}
             </h3>
             <p className="text-xs text-[#6F6F6F] font-inter mt-1 flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-neutral-400" /> 4.2 km from your position
+                <MapPin className="w-3 h-3 text-neutral-400" /> {currentCity}
               </span>
               <span>•</span>
-              <span>14 min by car</span>
+              <span>In-destination route</span>
             </p>
           </div>
         </div>
@@ -91,7 +153,7 @@ export const LiveJourneyHero = ({ onOpenMap, onOpenAI }: LiveJourneyHeroProps) =
           <button
             type="button"
             onClick={() => {
-              const query = encodeURIComponent('Fort Aguada, Candolim, Goa, India');
+              const query = encodeURIComponent(`${nextCheckpoint}, ${currentCity}`);
               window.open(`https://www.google.com/maps/dir/?api=1&destination=${query}`, '_blank');
             }}
             className="flex items-center gap-1.5 rounded-full px-5 py-2.5 bg-black hover:bg-neutral-800 text-white text-xs font-medium transition-all hover:scale-[1.02] cursor-pointer shadow-xs"

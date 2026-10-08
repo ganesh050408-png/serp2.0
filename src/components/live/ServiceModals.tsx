@@ -21,15 +21,17 @@ interface ServiceModalsProps {
   activeCategory: ServiceCategory | null;
   onClose: () => void;
   onRequestRide: (destination: string) => void;
+  city?: string;
 }
 
 export const ServiceModals = ({
   activeCategory,
   onClose,
   onRequestRide,
+  city = 'Panaji, Goa',
 }: ServiceModalsProps) => {
   const [selectedProvider, setSelectedProvider] = useState<string>('Uber');
-  const [rideDestination] = useState<string>('CityCare Hospital, Panaji');
+  const [rideDestination] = useState<string>(`Central Station / Hospital, ${city}`);
   const [bookedItem, setBookedItem] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export const ServiceModals = ({
             </div>
             <div>
               <span className="text-[10px] font-mono uppercase tracking-widest text-[#6F6F6F]">
-                LOCATION SERVICES · PANAJI, GOA
+                LOCATION SERVICES · {city.toUpperCase()}
               </span>
               <h3 className="font-instrument text-3xl text-[#000000] leading-tight">
                 {activeCategory === 'unwell' && 'Medical & Health Support'}
@@ -166,7 +168,7 @@ export const ServiceModals = ({
           {activeCategory === 'trains' && (
             <div className="space-y-4">
               <span className="text-xs font-mono uppercase text-[#6F6F6F] block">
-                SCENIC TRAINS CONNECTING GOA & MUMBAI
+                SCENIC TRAINS & EXPRESS CONNECTIVITY · {city.toUpperCase()}
               </span>
 
               {[
@@ -316,7 +318,7 @@ export const ServiceModals = ({
             <div className="space-y-5">
               <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
                 <span className="text-[11px] font-mono uppercase text-red-800 font-semibold block mb-1">CURRENT LOCATION COORDINATES</span>
-                <p className="text-sm font-mono text-red-950 font-bold">📍 15.4909° N, 73.8278° E — Panaji Waterfront Promenade, North Goa</p>
+                <p className="text-sm font-mono text-red-950 font-bold">📍 Active Coordinates — Central Promenade, {city}</p>
               </div>
 
               <div className="space-y-3">
