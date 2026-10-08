@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Phone,
@@ -259,11 +260,28 @@ export const HospitalsNearMeModal: React.FC<HospitalsNearMeModalProps> = ({
     };
   }, []);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isOpen, onClose]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-6 animate-fade-rise">
-      <div className="relative w-full max-w-5xl h-[92vh] max-h-[850px] bg-white border border-[#E7E5E2] rounded-[32px] shadow-2xl flex flex-col overflow-hidden">
+  if (!isOpen || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-6 animate-fade-in">
+      {/* Click outside backdrop */}
+      <div className="fixed inset-0 -z-10" onClick={onClose} />
+      <div className="relative w-full max-w-5xl h-[92vh] max-h-[850px] bg-white border border-[#E7E5E2] rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-fade-rise">
         {/* Header */}
         <div className="p-5 sm:p-6 bg-[#FAF8F5] border-b border-[#E7E5E2] flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -443,6 +461,7 @@ export const HospitalsNearMeModal: React.FC<HospitalsNearMeModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

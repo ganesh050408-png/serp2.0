@@ -9,6 +9,8 @@ import {
   Clock,
   Compass,
   KeyRound,
+  Crosshair,
+  Maximize2,
 } from 'lucide-react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { useJourneys } from '../../context/useJourneys';
@@ -52,6 +54,7 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
   // API & Map State
   const [mapStatus, setMapStatus] = useState<'loading' | 'missing_key' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mapFocusMode, setMapFocusMode] = useState<'destination' | 'overview'>('destination');
 
   // Live GPS State
   const [gpsStatus, setGpsStatus] = useState<string>('GPS: Searching...');
@@ -74,6 +77,17 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const lastGeocodedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Helper: Haversine distance between two points in km
+  const getDistanceKm = useCallback((a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+    const R = 6371;
+    const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+    const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+    const sinDLat = Math.sin(dLat / 2);
+    const sinDLng = Math.sin(dLng / 2);
+    const h = sinDLat * sinDLat + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * sinDLng * sinDLng;
+    return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  }, []);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
@@ -104,7 +118,7 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
 
   // Initialize and load Google Maps API
   const initGoogleMap = useCallback(async () => {
-    if (!apiKey || apiKey === 'your_key_here' || apiKey === 'your_google_maps_api_key') {
+    if (!apiKey || apiKey.startsWith('your_')) {
       setMapStatus('missing_key');
       return;
     }
@@ -266,53 +280,91 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
       });
     }
 
-    // Limit to max 6 stops for clean map rendering
-    const stopsToGeocode = extractedStops.slice(0, 6);
+    // Limit to max 8 stops for clean map rendering
+    const stopsToGeocode = extractedStops.slice(0, 8);
     if (stopsToGeocode.length === 0) {
       setStops([]);
       return;
     }
 
     const cityContext = activeJourney.city || activeJourney.destinations?.[0]?.city || '';
+    const countryContext = activeJourney.country || activeJourney.destinations?.[0]?.country || '';
+    const destLat = activeJourney.destinations?.[0]?.lat;
+    const destLng = activeJourney.destinations?.[0]?.lng;
 
-    // Geocode stops with fallback coordinates
-    const promises = stopsToGeocode.map((stopItem, index) => {
-      return new Promise<GeocodedStop>((resolve) => {
-        const query = cityContext && !stopItem.name.includes(cityContext) ? `${stopItem.name}, ${cityContext}` : stopItem.name;
+    // Build a region bias bounds around the destination (±1° ~110km box)
+    const regionBias = (destLat && destLng)
+      ? new google.maps.LatLngBounds(
+          new google.maps.LatLng(destLat - 1, destLng - 1),
+          new google.maps.LatLng(destLat + 1, destLng + 1)
+        )
+      : undefined;
 
-        geocoder.geocode({ address: query }, (results, status) => {
-          if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
-            const loc = results[0].geometry.location;
-            resolve({
-              id: `stop_${index}`,
-              name: stopItem.name,
-              dayNumber: stopItem.dayNumber,
-              lat: loc.lat(),
-              lng: loc.lng(),
-              completed: false,
-              isNext: index === 0,
-            });
-          } else {
-            // Slight offset fallback around destination center
-            const baseLat = activeJourney.destinations?.[0]?.lat || 15.2993;
-            const baseLng = activeJourney.destinations?.[0]?.lng || 74.1240;
-            const offsetLat = baseLat + (index - 2) * 0.018;
-            const offsetLng = baseLng + (index - 2) * 0.015;
-            resolve({
-              id: `stop_${index}`,
-              name: stopItem.name,
-              dayNumber: stopItem.dayNumber,
-              lat: offsetLat,
-              lng: offsetLng,
-              completed: false,
-              isNext: index === 0,
-            });
-          }
+    // Sequential geocoding with delay to avoid OVER_QUERY_LIMIT
+    const geocodeSequentially = async (): Promise<GeocodedStop[]> => {
+      const results: GeocodedStop[] = [];
+
+      for (let index = 0; index < stopsToGeocode.length; index++) {
+        const stopItem = stopsToGeocode[index];
+        // Build a well-qualified search query: "Stop Name, City, Country"
+        let query = stopItem.name;
+        if (cityContext && !stopItem.name.toLowerCase().includes(cityContext.toLowerCase())) {
+          query = `${stopItem.name}, ${cityContext}`;
+        }
+        if (countryContext && !query.toLowerCase().includes(countryContext.toLowerCase())) {
+          query = `${query}, ${countryContext}`;
+        }
+
+        const geocoded = await new Promise<GeocodedStop>((resolve) => {
+          geocoder.geocode(
+            {
+              address: query,
+              ...(regionBias ? { bounds: regionBias } : {}),
+            },
+            (geoResults, status) => {
+              if (status === google.maps.GeocoderStatus.OK && geoResults && geoResults[0]) {
+                const loc = geoResults[0].geometry.location;
+                resolve({
+                  id: `stop_${index}`,
+                  name: stopItem.name,
+                  dayNumber: stopItem.dayNumber,
+                  lat: loc.lat(),
+                  lng: loc.lng(),
+                  completed: false,
+                  isNext: index === 0,
+                });
+              } else {
+                // Tight cluster fallback around destination center (small random offsets)
+                const baseLat = destLat || 15.2993;
+                const baseLng = destLng || 74.1240;
+                const angle = (index / stopsToGeocode.length) * 2 * Math.PI;
+                const radius = 0.008 + index * 0.003; // ~1-3km offsets in a circle
+                resolve({
+                  id: `stop_${index}`,
+                  name: stopItem.name,
+                  dayNumber: stopItem.dayNumber,
+                  lat: baseLat + Math.cos(angle) * radius,
+                  lng: baseLng + Math.sin(angle) * radius,
+                  completed: false,
+                  isNext: index === 0,
+                });
+              }
+            }
+          );
         });
-      });
-    });
 
-    Promise.all(promises).then((geocodedList) => {
+        results.push(geocoded);
+
+        // Small delay between requests to avoid rate limiting
+        if (index < stopsToGeocode.length - 1) {
+          await new Promise((r) => setTimeout(r, 150));
+        }
+      }
+
+      return results;
+    };
+
+    geocodeSequentially().then((geocodedList) => {
       setStops(geocodedList);
     });
   }, [mapStatus, activeJourney]);
@@ -326,15 +378,25 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
     stopMarkersRef.current = [];
 
     const map = mapInstanceRef.current;
-    const bounds = new google.maps.LatLngBounds();
-
-    if (userLocation) {
-      bounds.extend(new google.maps.LatLng(userLocation.lat, userLocation.lng));
-    }
+    const stopsBounds = new google.maps.LatLngBounds();
 
     // Determine next upcoming stop
     const firstUncompleted = stops.find((s) => !completedStopIds.has(s.id)) || null;
     setNextStop(firstUncompleted);
+
+    // Calculate the center of all stops for distance checks
+    let stopsCenterLat = 0;
+    let stopsCenterLng = 0;
+    if (stops.length > 0) {
+      stops.forEach((s) => { stopsCenterLat += s.lat; stopsCenterLng += s.lng; });
+      stopsCenterLat /= stops.length;
+      stopsCenterLng /= stops.length;
+    }
+
+    // Check if user is near the destination area (within 100km)
+    const userIsNearDestination = userLocation && stops.length > 0
+      ? getDistanceKm(userLocation, { lat: stopsCenterLat, lng: stopsCenterLng }) < 100
+      : false;
 
     stops.forEach((stop, index) => {
       const isDone = completedStopIds.has(stop.id);
@@ -344,6 +406,7 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
         position: { lat: stop.lat, lng: stop.lng },
         map,
         title: stop.name,
+        zIndex: isCurrentNext ? 1000 : isDone ? 1 : 500,
         label: {
           text: `${index + 1}`,
           color: isDone ? '#999999' : isCurrentNext ? '#ffffff' : '#000000',
@@ -352,19 +415,19 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
         },
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: isCurrentNext ? 14 : 11,
+          scale: isCurrentNext ? 16 : 12,
           fillColor: isDone ? '#f5f5f5' : isCurrentNext ? '#000000' : '#ffffff',
           fillOpacity: 1,
           strokeColor: isCurrentNext ? '#000000' : isDone ? '#d4d4d4' : '#000000',
-          strokeWeight: 2,
+          strokeWeight: isCurrentNext ? 3 : 2,
         },
       });
 
       const infoWindow = new google.maps.InfoWindow({
         content: `
-          <div style="padding: 6px; font-family: sans-serif;">
-            <div style="font-size: 10px; font-family: monospace; color: #888; text-transform: uppercase;">Stop ${index + 1}</div>
-            <div style="font-weight: 600; font-size: 13px; color: #000; margin-top: 2px;">${stop.name}</div>
+          <div style="padding: 8px 10px; font-family: 'Inter', sans-serif; min-width: 140px;">
+            <div style="font-size: 9px; font-family: monospace; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">Stop ${index + 1}${stop.dayNumber ? ` · Day ${stop.dayNumber}` : ''}</div>
+            <div style="font-weight: 600; font-size: 13px; color: #000; margin-top: 3px;">${stop.name}</div>
             ${isDone ? '<div style="font-size: 10px; color: #059669; font-weight: 500; margin-top: 4px;">✓ Completed</div>' : ''}
           </div>
         `,
@@ -375,7 +438,7 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
       });
 
       stopMarkersRef.current.push(marker);
-      bounds.extend(new google.maps.LatLng(stop.lat, stop.lng));
+      stopsBounds.extend(new google.maps.LatLng(stop.lat, stop.lng));
     });
 
     // Draw real route between user (or origin) and next stop
@@ -405,6 +468,7 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
                 });
               }
             } else {
+              directionsRendererRef.current?.setDirections({ routes: [] } as any);
               setRouteInfo(null);
             }
           }
@@ -412,10 +476,35 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
       }
     }
 
-    if (!bounds.isEmpty()) {
-      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+    // Smart bounds fitting based on focus mode and user distance
+    if (stops.length > 0) {
+      if (mapFocusMode === 'destination' || !userIsNearDestination) {
+        // Focus on destination stops only — don't zoom out to include far-away user
+        if (!stopsBounds.isEmpty()) {
+          map.fitBounds(stopsBounds, { top: 50, right: 50, bottom: 50, left: 50 });
+          // Prevent excessive zoom-in when stops are very close together
+          const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
+            if ((map.getZoom() || 0) > 16) map.setZoom(16);
+          });
+          // Clean up listener after a short timeout
+          setTimeout(() => google.maps.event.removeListener(listener), 2000);
+        }
+      } else {
+        // Overview: include both user and all stops
+        const overviewBounds = new google.maps.LatLngBounds();
+        if (userLocation) {
+          overviewBounds.extend(new google.maps.LatLng(userLocation.lat, userLocation.lng));
+        }
+        stops.forEach((s) => overviewBounds.extend(new google.maps.LatLng(s.lat, s.lng)));
+        if (!overviewBounds.isEmpty()) {
+          map.fitBounds(overviewBounds, { top: 50, right: 50, bottom: 50, left: 50 });
+        }
+      }
+    } else if (userLocation) {
+      map.panTo(userLocation);
+      map.setZoom(14);
     }
-  }, [stops, userLocation, completedStopIds, mapStatus]);
+  }, [stops, userLocation, completedStopIds, mapStatus, mapFocusMode, getDistanceKm]);
 
   // Toggle stop completed
   const handleToggleStop = (stopId: string) => {
@@ -562,6 +651,22 @@ export const LiveLocationMap = ({ onRequestRide }: LiveLocationMapProps) => {
                 </span>
               </div>
             </div>
+          )}
+
+          {/* Focus Toggle Button */}
+          {stops.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMapFocusMode((m) => (m === 'destination' ? 'overview' : 'destination'))}
+              className="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-[#E7E5E2] rounded-full px-3 py-1.5 shadow-xs text-[10px] font-mono text-black hover:bg-black hover:text-white transition-all cursor-pointer"
+              title={mapFocusMode === 'destination' ? 'Show overview with your location' : 'Focus on destination stops'}
+            >
+              {mapFocusMode === 'destination' ? (
+                <><Maximize2 className="w-3 h-3" /><span>Overview</span></>
+              ) : (
+                <><Crosshair className="w-3 h-3" /><span>Focus Stops</span></>
+              )}
+            </button>
           )}
 
           {/* Permission Denied Banner Overlay */}

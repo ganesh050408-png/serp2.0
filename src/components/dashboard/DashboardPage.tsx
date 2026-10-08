@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DashboardNavbar } from './DashboardNavbar';
 import { DashboardHero } from './DashboardHero';
 import { CurrentJourneyCard } from './CurrentJourneyCard';
@@ -195,7 +196,7 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
           LIVE JOURNEY MODE (Active in Goa, Day 4)
       ========================================================================= */}
       {tripMode === 'live' ? (
-        <div className="animate-fade-rise">
+        <div>
           {/* Live Hero with Weather & Checkpoint */}
           <LiveJourneyHero
             onOpenMap={() => scrollToSection('live-map')}
@@ -235,21 +236,12 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
 
           {/* Live Budget & Expenditure Monitor */}
           <TravelBudget />
-
-          {/* Floating AI Travel Companion (Live context) */}
-          <LiveTravelCompanionDrawer
-            isOpen={isAIOpen}
-            onClose={() => setIsAIOpen(false)}
-            onOpen={() => setIsAIOpen(true)}
-            onRequestRide={handleRequestRide}
-            onOpenCategory={(cat) => setActiveServiceCategory(cat)}
-          />
         </div>
       ) : (
         /* =========================================================================
             PLANNING MODE (Trip Studio & Future Explorations)
         ========================================================================= */
-        <div className="animate-fade-rise">
+        <div>
           {/* 4. Dashboard Hero Greeting with Train Hover Animation and Direct Planner Navigation */}
           <DashboardHero
             onPlanNew={() => onNavigate('/planner/new')}
@@ -346,14 +338,24 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
               }
             }}
           />
-
-          {/* Floating Planning AI Assistant */}
-          <AIAssistantDrawer
-            isOpen={isAIOpen}
-            onClose={() => setIsAIOpen(false)}
-            onOpen={() => setIsAIOpen(true)}
-          />
         </div>
+      )}
+
+      {/* Floating AI Assistant / Travel Companion */}
+      {tripMode === 'live' ? (
+        <LiveTravelCompanionDrawer
+          isOpen={isAIOpen}
+          onClose={() => setIsAIOpen(false)}
+          onOpen={() => setIsAIOpen(true)}
+          onRequestRide={handleRequestRide}
+          onOpenCategory={(cat) => setActiveServiceCategory(cat)}
+        />
+      ) : (
+        <AIAssistantDrawer
+          isOpen={isAIOpen}
+          onClose={() => setIsAIOpen(false)}
+          onOpen={() => setIsAIOpen(true)}
+        />
       )}
 
       {/* Create New Journey Modal (National vs International vs Custom Builder) */}
@@ -409,10 +411,10 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
       )}
 
       {/* Notifications Drawer Modal */}
-      {isNotificationsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-rise">
+      {isNotificationsModalOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
           <div className="fixed inset-0 -z-10" onClick={() => setIsNotificationsModalOpen(false)} />
-          <div className="bg-[#FAF8F5] border border-[#E7E5E2] rounded-3xl w-full max-w-2xl p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl relative">
+          <div className="bg-[#FAF8F5] border border-[#E7E5E2] rounded-3xl w-full max-w-2xl p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-rise">
             <button
               onClick={() => setIsNotificationsModalOpen(false)}
               className="absolute top-6 right-6 p-2 text-[#6F6F6F] hover:text-black rounded-full cursor-pointer"
@@ -427,7 +429,8 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
               }}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Editorial Footer */}

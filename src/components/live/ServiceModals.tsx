@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   MapPin,
@@ -31,7 +32,22 @@ export const ServiceModals = ({
   const [rideDestination] = useState<string>('CityCare Hospital, Panaji');
   const [bookedItem, setBookedItem] = useState<string | null>(null);
 
-  if (!activeCategory) return null;
+  useEffect(() => {
+    if (activeCategory) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [activeCategory, onClose]);
+
+  if (!activeCategory || typeof document === 'undefined') return null;
 
   const handleBook = (title: string) => {
     setBookedItem(title);
@@ -41,9 +57,11 @@ export const ServiceModals = ({
     }, 2200);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-fade-rise">
-      <div className="bg-white border border-[#E7E5E2] rounded-[28px] max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+      {/* Click outside backdrop */}
+      <div className="fixed inset-0 -z-10" onClick={onClose} />
+      <div className="bg-white border border-[#E7E5E2] rounded-[28px] max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-fade-rise">
         {/* Modal Header */}
         <div className="p-6 border-b border-[#E7E5E2] bg-[#FAF8F5] flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -344,6 +362,7 @@ export const ServiceModals = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

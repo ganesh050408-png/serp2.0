@@ -145,12 +145,10 @@ export function App() {
         <div className="hidden md:block h-[88px] pointer-events-none" />
       </main>
     ) : (
-      <div className="animate-fade-rise">
-        <DashboardPage 
-          onGoToLanding={() => setCurrentView('landing')} 
-          onNavigate={navigate}
-        />
-      </div>
+      <DashboardPage 
+        onGoToLanding={() => setCurrentView('landing')} 
+        onNavigate={navigate}
+      />
     );
   };
 
