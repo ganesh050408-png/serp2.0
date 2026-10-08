@@ -149,7 +149,16 @@ export const tripToStoredJourney = (t: Trip, original?: StoredJourney): StoredJo
     datesDecided: !!t.startDate,
     travelType: t.travelType || original?.travelType || 'friends',
     members,
-    expenses: t.expenses || [],
+    expenses: (t.expenses || []).map((e: any) => ({
+      id: e.id,
+      title: e.title || e.description || 'Expense',
+      amount: e.amount || 0,
+      category: e.category || 'other',
+      date: e.date || new Date().toISOString(),
+      paidBy: e.paidBy,
+      splitAmong: e.splitAmong,
+      notes: e.notes,
+    })),
     travellersBreakdown: original?.travellersBreakdown || { adults: 2, children: 0 },
     budgetValue: {
       amount: t.budgetTarget || null,

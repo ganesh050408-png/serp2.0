@@ -165,7 +165,7 @@ export const JourneyCalendar = ({ journeyId, onNavigate }: JourneyCalendarProps)
     if (dayIndex === -1) return;
 
     const targetDay = { ...newItinerary[dayIndex] };
-    targetDay.activities = targetDay.activities.filter(a => a.id !== activityId);
+    targetDay.activities = (targetDay.activities as any[]).filter(a => (typeof a === 'string' ? a !== activityId : a.id !== activityId));
     newItinerary[dayIndex] = targetDay;
 
     const updatedJourney = { ...journey, itinerary: newItinerary };
@@ -247,11 +247,11 @@ export const JourneyCalendar = ({ journeyId, onNavigate }: JourneyCalendarProps)
     const sourceDay = { ...newItinerary[sourceIdx] };
     const targetDay = { ...newItinerary[targetIdx] };
 
-    const activityToMove = sourceDay.activities.find(a => a.id === activityId);
+    const activityToMove = (sourceDay.activities as any[]).find(a => (typeof a === 'string' ? a === activityId : a.id === activityId));
     if (!activityToMove) return;
 
     // Remove from source
-    sourceDay.activities = sourceDay.activities.filter(a => a.id !== activityId);
+    sourceDay.activities = (sourceDay.activities as any[]).filter(a => (typeof a === 'string' ? a !== activityId : a.id !== activityId));
     
     // Add to target
     targetDay.activities = [...targetDay.activities, activityToMove];
@@ -274,7 +274,7 @@ export const JourneyCalendar = ({ journeyId, onNavigate }: JourneyCalendarProps)
     if (dayIndex === -1) return;
 
     const targetDay = { ...newItinerary[dayIndex] };
-    targetDay.activities = targetDay.activities.map(a => a.id === editedAct.id ? editedAct : a);
+    targetDay.activities = (targetDay.activities as any[]).map(a => (typeof a === 'string' ? (a === editedAct.id ? editedAct : a) : (a.id === editedAct.id ? editedAct : a)));
     newItinerary[dayIndex] = targetDay;
 
     const updatedJourney = { ...journey, itinerary: newItinerary };
@@ -495,8 +495,8 @@ export const JourneyCalendar = ({ journeyId, onNavigate }: JourneyCalendarProps)
                   const count = getDayActivityCount(day);
                   const dDate = getDayDate(day.dayNumber);
                   
-                  // Compute conflicts for day
-                  const hasAnyConflict = day.activities.some(act => hasConflict(day.activities, act));
+                  const acts = (day.activities as any[]).map((a, i) => (typeof a === 'string' ? { id: `act-${i}`, name: a, startTime: '10:00', endTime: '12:00', location: day.city } : a)) as ActivityItem[];
+                  const hasAnyConflict = acts.some(act => hasConflict(acts, act));
 
                   return (
                     <div 
@@ -545,14 +545,14 @@ export const JourneyCalendar = ({ journeyId, onNavigate }: JourneyCalendarProps)
                       {isExpanded && (
                         <div className="p-5 sm:p-6 border-t border-subtleBorder space-y-6">
                           
-                          {day.activities.length === 0 ? (
+                          {acts.length === 0 ? (
                             <div className="border border-dashed border-neutral-100 rounded-xl p-8 text-center text-xs text-mutedGray font-inter">
                               "No activities planned for this day."
                             </div>
                           ) : (
                             <div className="space-y-4">
-                              {day.activities.map((act, actIdx) => {
-                                const conflict = hasConflict(day.activities, act);
+                              {acts.map((act, actIdx) => {
+                                const conflict = hasConflict(acts, act);
 
                                 return (
                                   <div

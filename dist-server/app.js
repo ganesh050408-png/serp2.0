@@ -5,6 +5,9 @@ import rateLimit from 'express-rate-limit';
 import aiRouter from './routes/ai.js';
 import destinationsRouter from './routes/destinations.js';
 import healthRouter from './routes/health.js';
+import hospitalsRouter from './routes/hospitals.js';
+import placesRouter from './routes/places.js';
+import photosRouter from './routes/photos.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { handleFlightSearchRequest } from './flightApiHandler.js';
 const getPositiveInteger = (value, fallback) => {
@@ -53,6 +56,9 @@ export const createApp = () => {
     app.use('/api/health', healthRouter);
     app.use('/api/ai', aiRateLimiter, aiRouter);
     app.use('/api/destinations', destinationsRouter);
+    app.use('/api/hospitals', hospitalsRouter);
+    app.use('/api/places', placesRouter);
+    app.use('/api/photos', photosRouter);
     app.get('/api/flights/search', async (req, res) => {
         await handleFlightSearchRequest(req, res);
     });

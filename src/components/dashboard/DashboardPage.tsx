@@ -16,6 +16,9 @@ import { ProfileDrawer } from './ProfileDrawer';
 import { JournalDrawer } from './JournalDrawer';
 import { DestinationDetailModal } from './DestinationDetailModal';
 import { TransportationStudio } from './TransportationStudio';
+import { HospitalsNearMeModal } from './HospitalsNearMeModal';
+import { TripNotificationCenter } from './TripNotificationCenter';
+import { X } from 'lucide-react';
 
 // Flagship feature components (context-backed)
 import { ItineraryBoard } from './ItineraryBoard';
@@ -59,6 +62,8 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
   // Drawer / Modal states
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [isHospitalsModalOpen, setIsHospitalsModalOpen] = useState(false);
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [selectedDestinationName, setSelectedDestinationName] = useState<string | null>(null);
 
   // Create Journey Flow states
@@ -178,6 +183,8 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
         onOpenAI={() => setIsAIOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenJournal={() => setIsJournalOpen(true)}
+        onOpenHospitals={() => onNavigate('/hospitals')}
+        onOpenNotifications={() => setIsNotificationsModalOpen(true)}
         onGoToLanding={onGoToLanding}
         onNavigateSection={scrollToSection}
         tripMode={tripMode}
@@ -391,6 +398,37 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
           onNavigate('/planner/new');
         }}
       />
+
+      {/* Hospitals Near Me Live Modal */}
+      {isHospitalsModalOpen && (
+        <HospitalsNearMeModal
+          isOpen={isHospitalsModalOpen}
+          onClose={() => setIsHospitalsModalOpen(false)}
+          defaultCity={activeJourney?.destinations?.[0]?.city || activeJourney?.city}
+        />
+      )}
+
+      {/* Notifications Drawer Modal */}
+      {isNotificationsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-rise">
+          <div className="fixed inset-0 -z-10" onClick={() => setIsNotificationsModalOpen(false)} />
+          <div className="bg-[#FAF8F5] border border-[#E7E5E2] rounded-3xl w-full max-w-2xl p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button
+              onClick={() => setIsNotificationsModalOpen(false)}
+              className="absolute top-6 right-6 p-2 text-[#6F6F6F] hover:text-black rounded-full cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <TripNotificationCenter
+              journeyId={activeJourney?.id}
+              onNavigate={(section) => {
+                setIsNotificationsModalOpen(false);
+                scrollToSection(section);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Editorial Footer */}
       <DashboardFooter
