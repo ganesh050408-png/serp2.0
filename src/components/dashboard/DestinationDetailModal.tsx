@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, MapPin, Sparkles, ArrowRight } from 'lucide-react';
 import { DestinationInfo, getOrCreateDestination } from '../../services/destinations';
 
@@ -27,15 +28,15 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
     };
   }, [destinationName, onClose]);
 
-  if (!destinationName) return null;
+  if (!destinationName || typeof document === 'undefined') return null;
 
   const dest: DestinationInfo = getOrCreateDestination(destinationName);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 overflow-y-auto animate-fade-rise">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 overflow-y-auto animate-fade-in">
       <div className="fixed inset-0 -z-10" onClick={onClose} />
 
-      <div className="relative w-full max-w-3xl bg-[#FAF8F5] border border-[#E7E5E2] rounded-[32px] shadow-2xl overflow-hidden my-auto flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-3xl bg-[#FAF8F5] border border-[#E7E5E2] rounded-[32px] shadow-2xl overflow-hidden my-auto flex flex-col max-h-[90vh] animate-fade-rise">
         {/* Cover Image & Top Actions */}
         <div className="relative h-[260px] sm:h-[320px] bg-neutral-900 shrink-0">
           <img
@@ -156,6 +157,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

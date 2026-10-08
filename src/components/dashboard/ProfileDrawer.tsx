@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   User,
@@ -106,13 +107,15 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     setProfile(updated);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 animate-fade-rise">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 animate-fade-in">
       {/* Click outside backdrop */}
       <div className="fixed inset-0 -z-10" onClick={onClose} />
 
       {/* Slide-in Drawer Window */}
-      <div className="relative w-full max-w-xl h-full bg-[#FAF8F5] border-l border-[#E7E5E2] shadow-2xl flex flex-col justify-between overflow-hidden">
+      <div className="relative w-full max-w-xl h-full bg-[#FAF8F5] border-l border-[#E7E5E2] shadow-2xl flex flex-col justify-between overflow-hidden animate-fade-rise">
         {/* Header */}
         <div className="p-6 sm:p-8 bg-white border-b border-[#E7E5E2] flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -478,6 +481,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
           <span>BUILD V2.4.0</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

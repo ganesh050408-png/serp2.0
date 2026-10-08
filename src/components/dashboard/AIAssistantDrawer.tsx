@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Sparkles, X, Send, Check, ArrowRight, Loader2 } from 'lucide-react';
 import { callAetheraAI } from '../../services/aiService';
 
@@ -104,7 +105,9 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
     ]);
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <>
       {/* Floating Trigger Button (when closed) */}
       {!isOpen && (
@@ -236,6 +239,7 @@ export const AIAssistantDrawer = ({ isOpen, onClose, onOpen }: AIAssistantDrawer
           </form>
         </div>
       )}
-    </>
+    </>,
+    document.body
   );
 };

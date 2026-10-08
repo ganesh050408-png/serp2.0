@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Sparkles, X, Send, Navigation, Car, Stethoscope, Pill, Loader2 } from 'lucide-react';
 import { callAetheraAI } from '../../services/aiService';
 
@@ -129,7 +130,19 @@ export const LiveTravelCompanionDrawer = ({
     }
   };
 
-  return (
+  useEffect(() => {
+    if (isOpen) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <>
       {/* Floating Travel Companion Trigger */}
       {!isOpen && (
@@ -272,6 +285,7 @@ export const LiveTravelCompanionDrawer = ({
           </form>
         </div>
       )}
-    </>
+    </>,
+    document.body
   );
 };

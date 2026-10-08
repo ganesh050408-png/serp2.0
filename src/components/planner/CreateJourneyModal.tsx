@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ArrowRight, Compass, Globe, Sparkles } from 'lucide-react';
 
 interface CreateJourneyModalProps {
@@ -28,15 +29,15 @@ export const CreateJourneyModal: React.FC<CreateJourneyModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 overflow-y-auto animate-fade-rise">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 overflow-y-auto animate-fade-in">
       {/* Click outside to close backdrop */}
       <div className="fixed inset-0 -z-10" onClick={onClose} />
 
       {/* Main Modal Window */}
-      <div className="relative w-full max-w-2xl bg-white border border-[#E7E5E2] rounded-[32px] p-6 sm:p-10 shadow-2xl overflow-hidden my-auto">
+      <div className="relative w-full max-w-2xl bg-white border border-[#E7E5E2] rounded-[32px] p-6 sm:p-10 shadow-2xl overflow-hidden my-auto animate-fade-rise">
         {/* Top Close / ESC Button */}
         <div className="flex items-center justify-between pb-5 border-b border-[#E7E5E2] mb-6">
           <div className="flex items-center gap-2">
@@ -149,6 +150,7 @@ export const CreateJourneyModal: React.FC<CreateJourneyModalProps> = ({
           <ArrowRight className="w-4 h-4 text-[#6F6F6F]" />
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

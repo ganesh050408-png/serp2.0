@@ -43,7 +43,7 @@ interface PlaceItem {
 const CATEGORIES: Array<{ id: PlaceCategory; label: string; icon: React.FC<{ className?: string }> }> = [
   { id: 'hotel', label: 'Hotels', icon: Hotel },
   { id: 'resort', label: 'Resorts', icon: Building2 },
-  { id: 'hostel', label: 'Hostels', icon: Building2 },
+  { id: 'hostel', label: 'Villas & Homestays', icon: Building2 },
   { id: 'restaurant', label: 'Dining & Cafes', icon: Utensils },
   { id: 'club', label: 'Clubs & Nightlife', icon: Moon },
   { id: 'shopping', label: 'Shopping & Bazaars', icon: ShoppingBag },
@@ -59,23 +59,28 @@ export const DiscoverPlacesSection: React.FC<DiscoverPlacesSectionProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState<string>(
-    journey.destinations?.[0]?.city || journey.destinations?.[0]?.name || journey.city || 'Mumbai'
-  );
   const [showOnlySaved, setShowOnlySaved] = useState(false);
   const [addingToDay, setAddingToDay] = useState<{ place: PlaceItem; dayIndex: number } | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
-  // Available destination cities from journey
+  // Available destination cities from journey, filtering out raw numbers
   const availableCities = Array.from(
     new Set(
       [
-        ...(journey.destinations?.map((d: any) => d.city || d.name) || []),
+        ...(journey.destinations?.map((d: any) => d.city || (!/^\d+$/.test(d.name || '') ? d.name : null)) || []),
         journey.city,
         journey.destination,
-      ].filter(Boolean) as string[]
+      ].filter((c): c is string => Boolean(c) && !/^\d+$/.test(c))
     )
   );
+
+  const [selectedCity, setSelectedCity] = useState<string>(() => {
+    const primary = journey.destinations?.[0]?.city || journey.destinations?.[0]?.name;
+    if (primary && !/^\d+$/.test(primary)) return primary;
+    if (journey.city && !/^\d+$/.test(journey.city)) return journey.city;
+    if (journey.destination && !/^\d+$/.test(journey.destination)) return journey.destination;
+    return availableCities[0] || 'Goa';
+  });
 
   const fetchPlaces = async (category: PlaceCategory, city: string) => {
     setLoading(true);
@@ -298,7 +303,19 @@ export const DiscoverPlacesSection: React.FC<DiscoverPlacesSectionProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Search ${activeCategory}s in ${selectedCity}...`}
+              placeholder={`Search ${
+                activeCategory === 'hostel'
+                  ? 'villas & homestays'
+                  : activeCategory === 'restaurant'
+                  ? 'dining & cafes'
+                  : activeCategory === 'club'
+                  ? 'nightlife'
+                  : activeCategory === 'shopping'
+                  ? 'bazaars & shopping'
+                  : activeCategory === 'activity'
+                  ? 'activities & sites'
+                  : `${activeCategory}s`
+              } in ${selectedCity}...`}
               className="w-full bg-[#FAF8F5] border border-[#E7E5E2] rounded-2xl pl-11 pr-4 py-3 text-sm text-black placeholder:text-[#6F6F6F] focus:outline-none focus:border-black transition-colors"
             />
           </div>

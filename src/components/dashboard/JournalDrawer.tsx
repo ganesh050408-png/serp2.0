@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Plus, BookOpen, MapPin, Calendar, Trash2, Save } from 'lucide-react';
 import { travelStorage, JournalEntry } from '../../services/travelStorage';
 
@@ -76,11 +77,23 @@ export const JournalDrawer: React.FC<JournalDrawerProps> = ({ isOpen, onClose })
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 overflow-y-auto animate-fade-rise">
+  useEffect(() => {
+    if (isOpen) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, onClose]);
+
+  if (!isOpen || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 overflow-y-auto animate-fade-in">
       <div className="fixed inset-0 -z-10" onClick={onClose} />
 
-      <div className="relative w-full max-w-5xl h-[90vh] bg-[#FAF8F5] border border-[#E7E5E2] rounded-[32px] shadow-2xl flex flex-col overflow-hidden my-auto">
+      <div className="relative w-full max-w-5xl h-[90vh] bg-[#FAF8F5] border border-[#E7E5E2] rounded-[32px] shadow-2xl flex flex-col overflow-hidden my-auto animate-fade-rise">
         {/* Header */}
         <div className="p-6 sm:p-8 bg-white border-b border-[#E7E5E2] flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -286,6 +299,7 @@ export const JournalDrawer: React.FC<JournalDrawerProps> = ({ isOpen, onClose })
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

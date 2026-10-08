@@ -56,7 +56,7 @@ function getOverpassCategoryTag(category: string): string {
     case 'hotel':
       return '["tourism"="hotel"]';
     case 'hostel':
-      return '["tourism"="hostel"]';
+      return '["tourism"~"guest_house|chalet|hostel"]';
     case 'resort':
       return '["tourism"="resort"]';
     case 'club':
@@ -81,10 +81,11 @@ async function fetchSerpApiHotels(city: string, category: 'hotel' | 'resort' | '
 
   const checkIn = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
   const checkOut = new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0];
+  const searchQuery = category === 'hostel' ? 'villas and homestays' : category;
 
   const params = new URLSearchParams({
     engine: 'google_hotels',
-    q: `${city} ${category}`,
+    q: `${city} ${searchQuery}`,
     check_in_date: checkIn,
     check_out_date: checkOut,
     adults: '2',
