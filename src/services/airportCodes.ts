@@ -9,12 +9,12 @@ export interface AirportInfo {
 
 export const AIRPORT_DATABASE: Record<string, AirportInfo> = {
   // India - Major
-  amd: { code: 'AMD', city: 'Ahmedabad', name: 'Sardar Vallabhbhai Patel International Airport', country: 'India' },
+  amd: { code: 'AMD', city: 'Ahmedabad (Gujarat)', name: 'Sardar Vallabhbhai Patel International Airport', country: 'India' },
   bom: { code: 'BOM', city: 'Mumbai', name: 'Chhatrapati Shivaji Maharaj International Airport', country: 'India' },
   del: { code: 'DEL', city: 'Delhi', name: 'Indira Gandhi International Airport', country: 'India' },
   goi: { code: 'GOI', city: 'Goa (Dabolim)', name: 'Dabolim Airport', country: 'India' },
   gox: { code: 'GOX', city: 'Goa (Mopa)', name: 'Manohar International Airport', country: 'India' },
-  blr: { code: 'BLR', city: 'Bengaluru', name: 'Kempegowda International Airport', country: 'India' },
+  blr: { code: 'BLR', city: 'Bengaluru / Bangalore', name: 'Kempegowda International Airport', country: 'India' },
   maa: { code: 'MAA', city: 'Chennai', name: 'Chennai International Airport', country: 'India' },
   ccu: { code: 'CCU', city: 'Kolkata', name: 'Netaji Subhash Chandra Bose International Airport', country: 'India' },
   hyd: { code: 'HYD', city: 'Hyderabad', name: 'Rajiv Gandhi International Airport', country: 'India' },
@@ -45,6 +45,17 @@ export const AIRPORT_DATABASE: Record<string, AirportInfo> = {
   jsa: { code: 'JSA', city: 'Jaisalmer', name: 'Jaisalmer Airport', country: 'India' },
   myq: { code: 'MYQ', city: 'Mysuru', name: 'Mysore Airport', country: 'India' },
   bbi: { code: 'BBI', city: 'Bhubaneswar', name: 'Biju Patnaik Airport', country: 'India' },
+  ixb: { code: 'IXB', city: 'Bagdogra / Siliguri', name: 'Bagdogra Airport', country: 'India' },
+  ixj: { code: 'IXJ', city: 'Jammu', name: 'Jammu Airport', country: 'India' },
+  ixr: { code: 'IXR', city: 'Ranchi', name: 'Birsa Munda Airport', country: 'India' },
+  ixu: { code: 'IXU', city: 'Aurangabad', name: 'Chhatrapati Sambhajinagar Airport', country: 'India' },
+  vga: { code: 'VGA', city: 'Vijayawada', name: 'Vijayawada International Airport', country: 'India' },
+  tir: { code: 'TIR', city: 'Tirupati', name: 'Tirupati Airport', country: 'India' },
+  trz: { code: 'TRZ', city: 'Tiruchirappalli', name: 'Tiruchirappalli International Airport', country: 'India' },
+  ixm: { code: 'IXM', city: 'Madurai', name: 'Madurai Airport', country: 'India' },
+  cnn: { code: 'CNN', city: 'Kannur', name: 'Kannur International Airport', country: 'India' },
+  ccj: { code: 'CCJ', city: 'Kozhikode / Calicut', name: 'Calicut International Airport', country: 'India' },
+  rpr: { code: 'RPR', city: 'Raipur', name: 'Swami Vivekananda Airport', country: 'India' },
 
   // International - Major
   dxb: { code: 'DXB', city: 'Dubai', name: 'Dubai International Airport', country: 'United Arab Emirates' },
@@ -72,46 +83,136 @@ export const AIRPORT_DATABASE: Record<string, AirportInfo> = {
 };
 
 /**
- * Resolve a city name, airport name, or code string into a 3-letter IATA code.
- * E.g. "Ahmedabad" -> "AMD", "Goa" -> "GOI", "AMD" -> "AMD", "Mumbai (BOM)" -> "BOM"
+ * Common state, union territory, and regional mappings to primary hub airports
+ */
+const REGIONAL_PRIMARY_AIRPORTS: Record<string, string> = {
+  gujarat: 'AMD',
+  kerala: 'COK',
+  rajasthan: 'JAI',
+  karnataka: 'BLR',
+  'tamil nadu': 'MAA',
+  tamilnadu: 'MAA',
+  maharashtra: 'BOM',
+  'west bengal': 'CCU',
+  bengal: 'CCU',
+  'uttar pradesh': 'LKO',
+  up: 'LKO',
+  ladakh: 'IXL',
+  kashmir: 'SXR',
+  jammu: 'IXJ',
+  'jammu and kashmir': 'SXR',
+  uttarakhand: 'DED',
+  'himachal pradesh': 'IXC',
+  himachal: 'IXC',
+  punjab: 'ATQ',
+  haryana: 'DEL',
+  odisha: 'BBI',
+  orissa: 'BBI',
+  assam: 'GAU',
+  bihar: 'PAT',
+  'madhya pradesh': 'BHO',
+  mp: 'BHO',
+  telangana: 'HYD',
+  'andhra pradesh': 'VTZ',
+  andhra: 'VTZ',
+  goa: 'GOI',
+};
+
+/**
+ * Check if a 3-letter code is a known IATA airport in our database
+ */
+export function isKnownAirportCode(code: string): boolean {
+  if (!code) return false;
+  return Boolean(AIRPORT_DATABASE[code.toLowerCase()]);
+}
+
+/**
+ * Resolve a city name, state, airport name, or code string into a valid 3-letter IATA code.
+ * E.g. "Gujarat" -> "AMD", "Ahmedabad" -> "AMD", "Goa" -> "GOI", "DEL" -> "DEL"
  */
 export function resolveAirportCode(input: string): string {
   if (!input) return '';
   const clean = input.trim();
+  const directKey = clean.toLowerCase();
 
-  // 1. Check if string contains bracketed code e.g. "Mumbai (BOM)"
+  // 1. Check if string contains bracketed code e.g. "Ahmedabad (AMD)"
   const bracketMatch = clean.match(/\(([A-Z]{3})\)/i);
   if (bracketMatch && bracketMatch[1]) {
     return bracketMatch[1].toUpperCase();
   }
 
-  // 2. Check if clean string is already a 3-letter IATA code
-  const directKey = clean.toLowerCase();
+  // 2. Check if clean string is already a known 3-letter IATA code
   if (AIRPORT_DATABASE[directKey]) {
     return AIRPORT_DATABASE[directKey].code;
   }
 
-  // 3. Search database by city name or airport name
+  // 3. Check regional and state mappings (e.g. "Gujarat" -> "AMD", "Kerala" -> "COK")
+  for (const [region, code] of Object.entries(REGIONAL_PRIMARY_AIRPORTS)) {
+    if (directKey === region || directKey.includes(region) || region.includes(directKey)) {
+      return code;
+    }
+  }
+
+  // 4. Special city aliases
+  if (directKey.includes('delhi') || directKey.includes('new delhi')) return 'DEL';
+  if (directKey.includes('mumbai') || directKey.includes('bombay')) return 'BOM';
+  if (directKey.includes('bangalore') || directKey.includes('bengaluru')) return 'BLR';
+  if (directKey.includes('calcutta') || directKey.includes('kolkata')) return 'CCU';
+  if (directKey.includes('madras') || directKey.includes('chennai')) return 'MAA';
+  if (directKey.includes('cochin') || directKey.includes('kochi')) return 'COK';
+  if (directKey.includes('goa')) return 'GOI';
+  if (directKey.includes('ahmedabad')) return 'AMD';
+  if (directKey.includes('jaipur')) return 'JAI';
+
+  // 5. Search database by city name or airport name
   for (const info of Object.values(AIRPORT_DATABASE)) {
     if (
       info.city.toLowerCase() === directKey ||
       directKey.includes(info.city.toLowerCase()) ||
-      info.city.toLowerCase().includes(directKey)
+      info.city.toLowerCase().includes(directKey) ||
+      info.name.toLowerCase().includes(directKey)
     ) {
       return info.code;
     }
   }
 
-  // 4. Special cases (e.g. Goa defaults to GOI)
-  if (directKey.includes('goa')) return 'GOI';
-  if (directKey.includes('delhi')) return 'DEL';
-  if (directKey.includes('mumbai') || directKey.includes('bombay')) return 'BOM';
-  if (directKey.includes('ahmedabad')) return 'AMD';
-  if (directKey.includes('bangalore') || directKey.includes('bengaluru')) return 'BLR';
+  // 6. If the user explicitly typed a 3-letter string (e.g. "JFK", "DXB"), return it uppercase
+  if (/^[a-zA-Z]{3}$/.test(clean)) {
+    return clean.toUpperCase();
+  }
 
-  // 5. Fallback: extract alphabetic characters uppercase
+  // 7. Fallback: return uppercase of first 3 alpha chars, or clean uppercase
   const alphaOnly = clean.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase();
   return alphaOnly || clean.toUpperCase();
+}
+
+/**
+ * Search the airport database for matching airports (autocomplete)
+ */
+export function searchAirports(query: string, limit = 6): AirportInfo[] {
+  if (!query || query.trim().length < 1) return [];
+  const q = query.trim().toLowerCase();
+  const results: AirportInfo[] = [];
+
+  // Exact code match first
+  if (AIRPORT_DATABASE[q]) {
+    results.push(AIRPORT_DATABASE[q]);
+  }
+
+  for (const info of Object.values(AIRPORT_DATABASE)) {
+    if (results.some((r) => r.code === info.code)) continue;
+    if (
+      info.code.toLowerCase().startsWith(q) ||
+      info.city.toLowerCase().includes(q) ||
+      info.name.toLowerCase().includes(q) ||
+      info.country.toLowerCase().includes(q)
+    ) {
+      results.push(info);
+      if (results.length >= limit) break;
+    }
+  }
+
+  return results;
 }
 
 /**

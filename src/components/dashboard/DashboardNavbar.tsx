@@ -5,7 +5,6 @@ import { travelStorage } from '../../services/travelStorage';
 interface DashboardNavbarProps {
   onOpenAI: () => void;
   onOpenProfile?: () => void;
-  onOpenJournal?: () => void;
   onOpenHospitals?: () => void;
   onOpenNotifications?: () => void;
   onGoToLanding?: () => void;
@@ -17,7 +16,6 @@ interface DashboardNavbarProps {
 export const DashboardNavbar = ({
   onOpenAI,
   onOpenProfile,
-  onOpenJournal,
   onOpenHospitals,
   onOpenNotifications,
   onGoToLanding,
@@ -43,14 +41,14 @@ export const DashboardNavbar = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 1. Primary planning progression: Home -> Explore -> My Journeys -> AI Planner -> Bikes & Rail -> Journal -> Hospitals
+  // 1. Primary planning progression in exact page order: Home -> Explore -> Itinerary -> My Journeys -> AI Planner -> Bikes & Rail -> Hospitals
   const planningNavItems = [
     { label: 'Home', section: 'hero' },
     { label: 'Explore', section: 'discovery' },
+    { label: 'Itinerary', section: 'itinerary' },
     { label: 'My Journeys', section: 'journeys' },
     { label: 'AI Planner', section: 'ai-planner' },
     { label: 'Bikes & Rail', section: 'transit-rentals' },
-    { label: 'Journal', section: 'journal_action' },
     { label: 'Hospitals', section: 'hospitals_action', icon: Hospital, ariaLabel: 'Hospitals directory' },
   ];
 
@@ -81,6 +79,7 @@ export const DashboardNavbar = ({
           { id: 'transit-rentals', label: 'Bikes & Rail' },
           { id: 'ai-planner', label: 'AI Planner' },
           { id: 'journeys', label: 'My Journeys' },
+          { id: 'itinerary', label: 'Itinerary' },
           { id: 'discovery', label: 'Explore' },
           { id: 'hero', label: 'Home' },
         ];
@@ -116,15 +115,6 @@ export const DashboardNavbar = ({
   const handleItemClick = (label: string, section: string) => {
     setActiveItem(label);
     setMobileMenuOpen(false);
-
-    if (section === 'journal_action') {
-      if (onOpenJournal) {
-        onOpenJournal();
-      } else if (onNavigateSection) {
-        onNavigateSection('itinerary');
-      }
-      return;
-    }
 
     if (section === 'hospitals_action') {
       if (onOpenHospitals) {

@@ -1,3 +1,5 @@
+import { ArrowRight } from 'lucide-react';
+
 interface HeroSectionProps {
   onBeginJourney?: () => void;
 }
@@ -28,9 +30,11 @@ export const HeroSection = ({ onBeginJourney }: HeroSectionProps) => {
         <button
           type="button"
           onClick={onBeginJourney}
-          className="rounded-full px-14 py-5 text-base font-medium bg-[#000000] text-[#FFFFFF] shadow-lg shadow-black/5 hover:shadow-black/15 transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+          className="group relative inline-flex items-center gap-3 rounded-full px-12 sm:px-14 py-4 sm:py-5 text-base font-medium bg-neutral-950 hover:bg-black text-white shadow-xl shadow-black/10 hover:shadow-2xl hover:shadow-black/20 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] cursor-pointer overflow-hidden border border-neutral-800"
         >
-          Begin Journey
+          <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform ease-out pointer-events-none" />
+          <span>Begin Journey</span>
+          <ArrowRight className="w-4 h-4 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
         </button>
       </div>
     </section>

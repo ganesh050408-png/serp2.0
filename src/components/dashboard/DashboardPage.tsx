@@ -187,7 +187,6 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
       <DashboardNavbar
         onOpenAI={() => setIsAIOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
-        onOpenJournal={() => setIsJournalOpen(true)}
         onOpenHospitals={() => onNavigate('/hospitals')}
         onOpenNotifications={() => setIsNotificationsModalOpen(true)}
         onGoToLanding={onGoToLanding}

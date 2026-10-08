@@ -2,14 +2,18 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Plane,
-  Search,
   ArrowRight,
   ExternalLink,
   Loader2,
   AlertCircle,
+  Users,
 } from 'lucide-react';
 import { searchFlights, SanitizedFlight } from '../../services/flightService';
-import { resolveAirportCode } from '../../services/airportCodes';
+import {
+  resolveAirportCode,
+  getAirportDisplayName,
+  AIRPORT_DATABASE,
+} from '../../services/airportCodes';
 
 export interface FlightSearchModalProps {
   isOpen: boolean;
@@ -85,10 +89,21 @@ export const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
 
   const originCode = resolveAirportCode(fromCity) || fromCity.toUpperCase();
   const destCode = resolveAirportCode(toCity) || toCity.toUpperCase();
+  const originDisplay = getAirportDisplayName(fromCity);
+  const destDisplay = getAirportDisplayName(toCity);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-rise">
       <div className="fixed inset-0 -z-10" onClick={onClose} />
+
+      {/* Datalist for airport autocomplete */}
+      <datalist id="flight-airports-datalist">
+        {Object.values(AIRPORT_DATABASE).map((airport) => (
+          <option key={airport.code} value={airport.city}>
+            {airport.code} · {airport.name}
+          </option>
+        ))}
+      </datalist>
 
       <div className="bg-[#FAF8F5] border border-[#E7E5E2] rounded-3xl w-full max-w-3xl p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between border-b border-[#E7E5E2] pb-4">
@@ -121,13 +136,17 @@ export const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
               </label>
               <input
                 type="text"
+                list="flight-airports-datalist"
                 value={fromCity}
                 onChange={(e) => setFromCity(e.target.value)}
-                placeholder="e.g. DEL or Delhi"
+                placeholder="e.g. Gujarat, Delhi, DEL"
                 className="w-full bg-[#FAF8F5] border border-[#E7E5E2] rounded-xl px-4 py-2.5 text-sm text-black focus:outline-none focus:border-black"
                 required
               />
-              <span className="text-[10px] font-mono text-[#6F6F6F] mt-1 block">Code: {originCode}</span>
+              <span className="text-[10px] font-mono text-[#6F6F6F] mt-1 block">
+                Airport: <strong className="text-black font-semibold">{originCode}</strong>
+                {originDisplay && originDisplay !== originCode ? ` · ${originDisplay}` : ''}
+              </span>
             </div>
 
             <div>
@@ -136,13 +155,17 @@ export const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
               </label>
               <input
                 type="text"
+                list="flight-airports-datalist"
                 value={toCity}
                 onChange={(e) => setToCity(e.target.value)}
-                placeholder="e.g. GOI or Goa"
+                placeholder="e.g. Bangalore, Goa, BLR"
                 className="w-full bg-[#FAF8F5] border border-[#E7E5E2] rounded-xl px-4 py-2.5 text-sm text-black focus:outline-none focus:border-black"
                 required
               />
-              <span className="text-[10px] font-mono text-[#6F6F6F] mt-1 block">Code: {destCode}</span>
+              <span className="text-[10px] font-mono text-[#6F6F6F] mt-1 block">
+                Airport: <strong className="text-black font-semibold">{destCode}</strong>
+                {destDisplay && destDisplay !== destCode ? ` · ${destDisplay}` : ''}
+              </span>
             </div>
           </div>
 
@@ -204,45 +227,61 @@ export const FlightSearchModal: React.FC<FlightSearchModalProps> = ({
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
-            <div className="flex items-center gap-3 text-xs font-mono">
-              <label className="flex items-center gap-1.5 text-[#6F6F6F]">
-                <span>Passengers:</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={9}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t border-[#E7E5E2]">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {/* Passengers Pill */}
+              <div className="flex items-center gap-2 bg-[#FAF8F5] border border-[#E7E5E2] rounded-xl px-3 py-2 text-xs font-inter text-neutral-800 shadow-xs">
+                <Users className="w-3.5 h-3.5 text-[#6F6F6F]" />
+                <span className="text-[#6F6F6F] font-mono text-[10px] uppercase tracking-wider">Pax</span>
+                <select
                   value={adults}
                   onChange={(e) => setAdults(Number(e.target.value))}
-                  className="w-14 bg-[#FAF8F5] border border-[#E7E5E2] rounded px-2 py-1 text-black font-bold"
-                />
-              </label>
+                  className="bg-transparent font-semibold text-black focus:outline-none cursor-pointer"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                    <option key={n} value={n}>
+                      {n} {n === 1 ? 'Adult' : 'Adults'}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="bg-[#FAF8F5] border border-[#E7E5E2] rounded px-2 py-1 text-black font-mono text-xs"
-              >
-                <option value="INR">INR (₹)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-              </select>
+              {/* Currency Pill */}
+              <div className="flex items-center gap-2 bg-[#FAF8F5] border border-[#E7E5E2] rounded-xl px-3 py-2 text-xs font-inter text-neutral-800 shadow-xs">
+                <span className="text-[#6F6F6F] font-mono text-[10px] uppercase tracking-wider">Curr</span>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="bg-transparent font-semibold text-black focus:outline-none cursor-pointer"
+                >
+                  <option value="INR">INR (₹)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                </select>
+              </div>
             </div>
 
+            {/* Premium Flight Search Button */}
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 bg-black text-white text-xs font-mono rounded-full hover:bg-neutral-800 disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-sm"
+              className="group relative inline-flex items-center justify-center gap-2.5 px-7 py-3 rounded-2xl bg-neutral-950 hover:bg-black text-white text-xs font-mono font-medium uppercase tracking-wider shadow-md shadow-neutral-950/15 hover:shadow-xl hover:shadow-black/25 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer overflow-hidden border border-neutral-800"
             >
+              {/* Subtle luxury light sweep animation on hover */}
+              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform ease-out pointer-events-none" />
+
               {loading ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Searching Flights...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-300 shrink-0" />
+                  <span className="text-neutral-200">Searching Live Routes...</span>
                 </>
               ) : (
                 <>
-                  <Search className="w-3.5 h-3.5" />
-                  <span>Search Live Flights</span>
+                  <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                    <Plane className="w-3.5 h-3.5 text-white transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                  </div>
+                  <span className="font-semibold text-white tracking-wider">Search Live Flights</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
                 </>
               )}
             </button>

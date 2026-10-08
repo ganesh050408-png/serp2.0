@@ -12,6 +12,7 @@ import {
   X,
   CreditCard,
   Building,
+  ArrowRight,
 } from 'lucide-react';
 import {
   StoredJourney,
@@ -156,10 +157,14 @@ export const JourneyBookingsHub: React.FC<JourneyBookingsHubProps> = ({
             <button
               type="button"
               onClick={() => setIsFlightSearchOpen(true)}
-              className="px-4 py-2.5 rounded-full bg-black text-white text-xs font-mono hover:bg-neutral-800 flex items-center gap-2 cursor-pointer shadow-sm"
+              className="group relative inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-neutral-950 hover:bg-black text-white text-xs font-mono tracking-wider shadow-md hover:shadow-xl hover:shadow-black/20 active:scale-[0.98] transition-all duration-200 cursor-pointer border border-neutral-800 overflow-hidden"
             >
-              <Plane className="w-3.5 h-3.5" />
-              <span>Search Flights (SerpApi)</span>
+              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform ease-out pointer-events-none" />
+              <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                <Plane className="w-3 h-3 text-white transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+              </div>
+              <span className="font-semibold text-white">Search Flights</span>
+              <ArrowRight className="w-3 h-3 text-white/50 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
             </button>
 
             <button
@@ -338,9 +343,10 @@ export const JourneyBookingsHub: React.FC<JourneyBookingsHubProps> = ({
               <button
                 type="button"
                 onClick={() => setIsFlightSearchOpen(true)}
-                className="px-4 py-2 bg-black text-white text-xs font-mono rounded-full hover:bg-neutral-800 cursor-pointer"
+                className="group inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-950 hover:bg-black text-white text-xs font-mono rounded-2xl hover:shadow-md active:scale-[0.98] transition-all cursor-pointer"
               >
-                Search Flights
+                <Plane className="w-3.5 h-3.5 text-white/80 group-hover:rotate-12 transition-transform" />
+                <span>Search Live Flights</span>
               </button>
               <button
                 type="button"
