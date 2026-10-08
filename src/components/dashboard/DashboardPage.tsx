@@ -72,6 +72,10 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
   const [activePlanningJourney, setActivePlanningJourney] = useState<'national' | 'international' | null>(null);
 
   const scrollToSection = (sectionId: string) => {
+    if (sectionId === 'hero') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     const el = document.getElementById(sectionId);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -249,6 +253,17 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
             onOpenTrain={() => onNavigate('/train')}
           />
 
+          {/* Destination Discovery Magazine Showcase ("Explore" - Places worth discovering) */}
+          <DestinationDiscovery
+            onSelectDestination={(name, journeyId) => {
+              if (journeyId) {
+                onNavigate(`/journey/${journeyId}`);
+              } else {
+                setSelectedDestinationName(name);
+              }
+            }}
+          />
+
           {/* 6 & 7. Current Journey Cinematic Card + Minimal Trip Status */}
           <CurrentJourneyCard
             journey={activeJourney}
@@ -287,6 +302,14 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
           {/* 10. AI Planner ("Let AI plan the details") */}
           <AIPlannerSection />
 
+          {/* Transportation Studio (Decision Screen + Bike & Flight Booking Flows - "Bikes & Rail") */}
+          <TransportationStudio
+            currentJourney={activeJourney}
+            journeys={journeys}
+            onOpenTrainExperience={() => onNavigate('/train')}
+            onNavigate={onNavigate}
+          />
+
           {/* 11. Upcoming Itinerary */}
           <UpcomingItinerary journey={activeJourney} onOpenJourney={handleSelectJourney} />
 
@@ -314,29 +337,10 @@ export const DashboardPage = ({ onGoToLanding, onNavigate }: DashboardPageProps)
             onPlanNew={() => onNavigate('/planner/new')}
           />
 
-          {/* Transportation Studio (Decision Screen + Bike & Flight Booking Flows) */}
-          <TransportationStudio
-            currentJourney={activeJourney}
-            journeys={journeys}
-            onOpenTrainExperience={() => onNavigate('/train')}
-            onNavigate={onNavigate}
-          />
-
           {/* 14. Travel Together Collaboration */}
           <TravelTogether
             onOpenJourney={handleSelectJourney}
             onNavigateSection={scrollToSection}
-          />
-
-          {/* 16. Destination Discovery Magazine Showcase */}
-          <DestinationDiscovery
-            onSelectDestination={(name, journeyId) => {
-              if (journeyId) {
-                onNavigate(`/journey/${journeyId}`);
-              } else {
-                setSelectedDestinationName(name);
-              }
-            }}
           />
         </div>
       )}

@@ -39,20 +39,22 @@ export const DashboardNavbar = ({
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // 1. Primary planning progression: Home -> Explore -> My Journeys -> AI Planner -> Bikes & Rail -> Journal -> Hospitals
   const planningNavItems = [
     { label: 'Home', section: 'hero' },
     { label: 'Explore', section: 'discovery' },
     { label: 'My Journeys', section: 'journeys' },
-    { label: 'Bikes & Rail', section: 'transit-rentals' },
     { label: 'AI Planner', section: 'ai-planner' },
+    { label: 'Bikes & Rail', section: 'transit-rentals' },
     { label: 'Journal', section: 'journal_action' },
-    { label: 'Hospitals', section: 'hospitals_action', icon: Hospital, ariaLabel: 'Hospitals near me' },
+    { label: 'Hospitals', section: 'hospitals_action', icon: Hospital, ariaLabel: 'Hospitals directory' },
   ];
 
+  // Live journey tracking sequence
   const liveNavItems = [
     { label: 'Live Map', section: 'live-map' },
     { label: 'Near You', section: 'near-you' },
@@ -63,6 +65,53 @@ export const DashboardNavbar = ({
   ];
 
   const currentNavItems = tripMode === 'live' ? liveNavItems : planningNavItems;
+
+  // ScrollSpy to automatically reflect active section in sequence
+  useEffect(() => {
+    const handleSectionScroll = () => {
+      if (window.scrollY < 120) {
+        setActiveItem(tripMode === 'live' ? 'Live Map' : 'Home');
+        return;
+      }
+
+      const scrollPos = window.scrollY + 200;
+
+      if (tripMode === 'planning') {
+        const sections = [
+          { id: 'transit-rentals', label: 'Bikes & Rail' },
+          { id: 'ai-planner', label: 'AI Planner' },
+          { id: 'journeys', label: 'My Journeys' },
+          { id: 'discovery', label: 'Explore' },
+          { id: 'hero', label: 'Home' },
+        ];
+        for (const sec of sections) {
+          const el = document.getElementById(sec.id);
+          if (el && el.offsetTop <= scrollPos) {
+            setActiveItem(sec.label);
+            break;
+          }
+        }
+      } else {
+        const sections = [
+          { id: 'budget', label: 'Budget' },
+          { id: 'travel-together', label: 'Companions' },
+          { id: 'today-schedule', label: 'Today’s Plan' },
+          { id: 'near-you', label: 'Near You' },
+          { id: 'live-map', label: 'Live Map' },
+        ];
+        for (const sec of sections) {
+          const el = document.getElementById(sec.id);
+          if (el && el.offsetTop <= scrollPos) {
+            setActiveItem(sec.label);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleSectionScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleSectionScroll);
+  }, [tripMode]);
 
   const handleItemClick = (label: string, section: string) => {
     setActiveItem(label);
@@ -93,124 +142,146 @@ export const DashboardNavbar = ({
     <header
       className={`sticky top-0 z-40 w-full transition-all duration-300 ${
         isScrolled
-          ? 'bg-white/85 backdrop-blur-md border-b border-[#E7E5E2]/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
-          : 'bg-transparent'
+          ? 'bg-white/90 backdrop-blur-md border-b border-[#E7E5E2]/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
+          : 'bg-white/70 backdrop-blur-xs border-b border-[#E7E5E2]/40'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 py-5 sm:py-6 flex items-center justify-between">
-        {/* Left Brand Logo & Mode Badge */}
-        <div className="flex items-center gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between gap-2 lg:gap-4">
+        
+        {/* =========================================================================
+            ZONE 1: BRAND IDENTITY + WORKSPACE MODE CONTEXT
+        ========================================================================= */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           {onGoToLanding && (
             <button
               onClick={onGoToLanding}
-              className="text-[#6F6F6F] hover:text-[#000000] p-1.5 -ml-2 rounded-full hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="text-[#6F6F6F] hover:text-[#000000] p-1.5 -ml-1 rounded-full hover:bg-neutral-100 transition-colors cursor-pointer"
               title="Return to Main Landing"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
+
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
               handleItemClick(tripMode === 'live' ? 'Live Map' : 'Home', tripMode === 'live' ? 'live-map' : 'hero');
             }}
-            className="font-instrument text-2xl sm:text-3xl tracking-tight text-[#000000] select-none hover:opacity-80 transition-opacity inline-flex items-baseline"
+            className="font-instrument text-2xl sm:text-[28px] tracking-tight text-[#000000] select-none hover:opacity-80 transition-opacity inline-flex items-baseline"
           >
             <span>Aethera</span>
             <sup className="text-xs font-sans ml-0.5 relative -top-3">°</sup>
           </a>
 
-          {/* Mode Switcher Pill */}
+          {/* Subtle separator between brand and mode status */}
+          <div className="hidden sm:block h-4 w-px bg-neutral-200/90 mx-0.5" />
+
+          {/* Mode Switcher Pill (Secondary context indicator) */}
           <button
             type="button"
             onClick={() => onToggleTripMode(tripMode === 'live' ? 'planning' : 'live')}
-            className={`hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono transition-all duration-200 cursor-pointer ${
+            className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono tracking-wider transition-all duration-200 border cursor-pointer ${
               tripMode === 'live'
-                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs hover:bg-emerald-100'
-                : 'bg-neutral-100 text-[#6F6F6F] hover:text-black border border-[#E7E5E2] hover:bg-neutral-200'
+                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 shadow-2xs hover:bg-emerald-100'
+                : 'bg-[#FAF8F5] text-neutral-600 border-[#E7E5E2] shadow-2xs hover:text-black hover:border-neutral-400'
             }`}
-            title="Click to toggle between Planning Mode and Live Journey Companion Mode"
+            title="Click to toggle between Planning Mode and Live Journey Mode"
           >
             <span
-              className={`w-2 h-2 rounded-full ${
+              className={`w-1.5 h-1.5 rounded-full ${
                 tripMode === 'live' ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-400'
               }`}
             />
-            <span className="font-semibold uppercase tracking-wider">
+            <span className="font-semibold uppercase">
               {tripMode === 'live' ? 'LIVE JOURNEY' : 'PLANNING MODE'}
             </span>
           </button>
         </div>
 
-        {/* Center Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6 lg:space-x-7">
+        {/* =========================================================================
+            ZONE 2: PRIMARY TRAVEL-PLANNING PROGRESSION (Centered Navigation Bar)
+        ========================================================================= */}
+        <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-neutral-100/70 p-1 rounded-full border border-neutral-200/60 shadow-2xs shrink-0">
           {currentNavItems.map((item) => {
             const Icon = item.icon;
+            const isActive = activeItem === item.label;
             return (
               <button
                 key={item.label}
                 onClick={() => handleItemClick(item.label, item.section)}
                 aria-label={item.ariaLabel || item.label}
-                className={`text-sm tracking-wide transition-colors duration-200 cursor-pointer flex items-center gap-1.5 py-1 px-1.5 rounded-lg hover:bg-neutral-100/70 ${
-                  activeItem === item.label
-                    ? 'text-[#000000] font-medium'
-                    : 'text-[#6F6F6F] hover:text-[#000000]'
+                className={`whitespace-nowrap shrink-0 text-xs xl:text-[13px] tracking-normal transition-all duration-200 cursor-pointer flex items-center gap-1.5 py-1.5 px-2.5 xl:px-3 rounded-full select-none ${
+                  isActive
+                    ? 'bg-white text-black font-semibold shadow-xs border border-neutral-200/80'
+                    : 'text-neutral-600 hover:text-black hover:bg-neutral-200/50'
                 }`}
               >
-                {Icon && <Icon className="w-3.5 h-3.5 opacity-70" />}
-                <span>{item.label}</span>
+                {Icon && <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-black' : 'text-neutral-400'}`} />}
+                <span className="whitespace-nowrap">{item.label}</span>
               </button>
             );
           })}
         </nav>
 
-        {/* Right Actions: Notifications + AI Assistant Pill + Profile */}
-        <div className="hidden sm:flex items-center space-x-3">
+        {/* =========================================================================
+            ZONE 3: SECONDARY / UTILITY CONTROLS (Right cluster)
+        ========================================================================= */}
+        <div className="hidden sm:flex items-center gap-2 lg:gap-2.5 shrink-0">
+          {/* Subtle separator from primary nav */}
+          <div className="hidden lg:block h-4 w-px bg-neutral-200/90 mr-0.5" />
+
+          {/* AI Assistant Quick Tool (Distinct utility styling with sparkle) */}
+          <button
+            type="button"
+            onClick={onOpenAI}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-neutral-100 hover:bg-neutral-200/80 text-black border border-[#E7E5E2] transition-all duration-200 hover:scale-[1.02] cursor-pointer shadow-2xs"
+            title={tripMode === 'live' ? 'Open Travel Companion' : 'Open AI Assistant'}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-neutral-700" />
+            <span className="font-sans">
+              {tripMode === 'live' ? 'Companion' : 'AI Assistant'}
+            </span>
+          </button>
+
+          {/* Notifications */}
           {onOpenNotifications && (
             <button
               type="button"
               onClick={onOpenNotifications}
-              className="relative p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-black border border-[#E7E5E2] transition-colors cursor-pointer"
+              className="relative p-2 rounded-full hover:bg-neutral-100 text-neutral-700 hover:text-black border border-transparent hover:border-[#E7E5E2] transition-colors cursor-pointer"
               title="View trip alerts and notifications"
               aria-label="View notifications"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white rounded-full text-[9px] font-mono flex items-center justify-center font-bold">
-                  {unreadCount}
-                </span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full" />
               )}
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={onOpenAI}
-            className="flex items-center gap-2 rounded-full px-4 py-2 text-xs sm:text-sm font-medium bg-neutral-100 hover:bg-neutral-200 text-[#000000] border border-[#E7E5E2] transition-all duration-200 hover:scale-[1.02] cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#000000]" />
-            <span>{tripMode === 'live' ? '✦ Travel Companion' : '✦ AI Assistant'}</span>
-          </button>
-
+          {/* User Profile */}
           <button
             type="button"
             onClick={onOpenProfile}
-            className="flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 text-xs sm:text-sm font-medium bg-[#000000] text-white hover:opacity-90 transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+            className="flex items-center gap-2 rounded-full p-1 xl:pr-3 text-xs font-medium hover:bg-neutral-100 border border-transparent hover:border-[#E7E5E2] transition-all duration-200 cursor-pointer"
+            aria-label="User profile"
           >
-            <div className="w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-[10px] text-white uppercase font-serif">
+            <div className="w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px] font-sans font-semibold">
               A
             </div>
-            <span className="hidden lg:inline font-sans text-xs">Aravind S.</span>
+            <span className="hidden xl:inline font-sans text-xs text-neutral-800">Aravind S.</span>
           </button>
         </div>
 
-        {/* Mobile controls */}
-        <div className="flex md:hidden items-center gap-2">
+        {/* =========================================================================
+            MOBILE / COMPACT CONTROLS
+        ========================================================================= */}
+        <div className="flex lg:hidden items-center gap-1.5">
           <button
             type="button"
             onClick={() => onToggleTripMode(tripMode === 'live' ? 'planning' : 'live')}
-            className={`px-2.5 py-1 rounded-full text-[10px] font-mono uppercase flex items-center gap-1 border ${
+            className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase flex items-center gap-1 border ${
               tripMode === 'live'
                 ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
                 : 'bg-neutral-100 text-neutral-600 border-neutral-300'
@@ -223,28 +294,28 @@ export const DashboardNavbar = ({
           <button
             type="button"
             onClick={onOpenAI}
-            className="p-2 rounded-full bg-neutral-100 text-[#000000] border border-[#E7E5E2]"
+            className="p-1.5 rounded-full bg-neutral-100 text-[#000000] border border-[#E7E5E2]"
             aria-label="Open AI Assistant"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-3.5 h-3.5" />
           </button>
 
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-[#000000]"
+            className="p-1.5 text-[#000000] cursor-pointer"
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer (Clean planning flow sequence) */}
       {mobileMenuOpen && (
-        <div className="md:hidden px-8 pt-2 pb-6 bg-white/95 backdrop-blur-md border-b border-[#E7E5E2] flex flex-col space-y-4">
+        <div className="lg:hidden px-6 pt-3 pb-6 bg-white/98 backdrop-blur-md border-b border-[#E7E5E2] flex flex-col space-y-3 animate-fade-in shadow-lg">
           <div className="pb-2 border-b border-neutral-100 flex items-center justify-between">
-            <span className="text-xs font-mono uppercase text-[#6F6F6F]">Switch Workspace Mode:</span>
+            <span className="text-xs font-mono uppercase text-[#6F6F6F]">Workspace Mode:</span>
             <button
               onClick={() => {
                 onToggleTripMode(tripMode === 'live' ? 'planning' : 'live');
@@ -256,33 +327,40 @@ export const DashboardNavbar = ({
             </button>
           </div>
 
-          {currentNavItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.label}
-                onClick={() => handleItemClick(item.label, item.section)}
-                aria-label={item.ariaLabel || item.label}
-                className={`text-left text-base py-1 transition-colors flex items-center gap-2 ${
-                  activeItem === item.label ? 'text-[#000000] font-medium' : 'text-[#6F6F6F]'
-                }`}
-              >
-                {Icon && <Icon className="w-4 h-4 opacity-70" />}
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-          <div className="pt-2 flex items-center justify-between border-t border-neutral-100">
+          <div className="flex flex-col space-y-1">
+            {currentNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeItem === item.label;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => handleItemClick(item.label, item.section)}
+                  aria-label={item.ariaLabel || item.label}
+                  className={`text-left text-sm py-2 px-3 rounded-xl transition-colors flex items-center justify-between cursor-pointer ${
+                    isActive ? 'bg-neutral-100 text-black font-semibold' : 'text-neutral-600 hover:text-black'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {Icon && <Icon className="w-4 h-4 opacity-70" />}
+                    <span>{item.label}</span>
+                  </div>
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-black" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="pt-3 flex items-center justify-between border-t border-neutral-100">
             <button
               type="button"
               onClick={() => {
                 setMobileMenuOpen(false);
                 if (onOpenProfile) onOpenProfile();
               }}
-              className="flex items-center gap-2 text-sm text-[#000000] hover:underline"
+              className="flex items-center gap-2 text-xs text-[#000000] hover:underline"
             >
               <User className="w-4 h-4 text-[#6F6F6F]" />
-              <span>Aravind S. (View Profile)</span>
+              <span>Aravind S. (Profile & Settings)</span>
             </button>
             {onGoToLanding && (
               <button
