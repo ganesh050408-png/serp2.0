@@ -199,8 +199,7 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
             }}
             className="font-instrument italic text-2xl sm:text-3xl text-white select-none inline-flex items-baseline"
           >
-            <span>Aethera</span>
-            <sup className="text-xs font-sans ml-0.5 relative -top-3">°</sup>
+            <span>Adhira</span>
           </a>
         </div>
 
@@ -627,7 +626,7 @@ export const NationalJourney: React.FC<NationalJourneyProps> = ({
         <div className="hidden lg:flex items-center gap-6 text-xs text-white/60 font-mono">
           <span>60+ Curated Havens</span>
           <span>•</span>
-          <span>Aethera National Studio</span>
+          <span>Adhira National Studio</span>
         </div>
       </footer>
     </section>

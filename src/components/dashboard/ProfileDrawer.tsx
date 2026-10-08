@@ -87,7 +87,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   };
 
   const handleLogout = () => {
-    if (confirm('Are you sure you want to sign out of Aethera?')) {
+    if (confirm('Are you sure you want to sign out of Adhira?')) {
       travelStorage.clearSession();
       onClose();
       if (onNavigate) {
@@ -230,7 +230,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                     </span>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-instrument text-2xl text-black">Aethera Pioneer</h4>
+                        <h4 className="font-instrument text-2xl text-black">Adhira Pioneer</h4>
                         <p className="text-xs text-[#6F6F6F] font-inter">Global concierge priority access</p>
                       </div>
                       <span className="text-xs font-mono px-3 py-1 bg-neutral-100 rounded-full border border-[#E7E5E2]">
@@ -459,7 +459,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
 
               <div className="bg-white border border-red-200 rounded-2xl p-6 flex items-center justify-between">
                 <div>
-                  <h4 className="font-inter text-sm font-semibold text-red-950">Sign out of Aethera</h4>
+                  <h4 className="font-inter text-sm font-semibold text-red-950">Sign out of Adhira</h4>
                   <p className="text-xs text-red-800/80 font-inter">End current session on this device</p>
                 </div>
                 <button
@@ -477,7 +477,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
 
         {/* Footer */}
         <div className="p-6 bg-white border-t border-[#E7E5E2] flex items-center justify-between text-xs text-[#6F6F6F] font-mono">
-          <span>AETHERA ID: #AE-2026-9840</span>
+          <span>ADHIRA ID: #AD-2026-9840</span>
           <span>BUILD V2.4.0</span>
         </div>
       </div>

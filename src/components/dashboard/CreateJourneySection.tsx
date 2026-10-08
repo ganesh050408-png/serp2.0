@@ -65,7 +65,7 @@ export const CreateJourneySection = ({ onCreateTrip }: CreateJourneySectionProps
             Dream somewhere new.
           </h2>
           <p className="font-inter text-sm sm:text-base text-[#6F6F6F] mt-4 mb-10 max-w-xl mx-auto leading-relaxed">
-            Tell Aethera where you want to go. We'll help you turn the idea into a crafted journey.
+            Tell Adhira where you want to go. We'll help you turn the idea into a crafted journey.
           </p>
 
           {/* Interactive Form */}

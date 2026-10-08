@@ -375,8 +375,7 @@ export const JourneyPlanner = ({ onNavigate }: JourneyPlannerProps) => {
           onClick={(e) => { e.preventDefault(); onNavigate('/'); }}
           className="font-instrument text-3xl tracking-tight select-none inline-flex items-baseline"
         >
-          <span>Aethera</span>
-          <sup className="text-xs font-sans ml-0.5 relative -top-3">°</sup>
+          <span>Adhira</span>
         </a>
       </div>
 

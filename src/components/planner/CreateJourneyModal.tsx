@@ -41,8 +41,7 @@ export const CreateJourneyModal: React.FC<CreateJourneyModalProps> = ({
         {/* Top Close / ESC Button */}
         <div className="flex items-center justify-between pb-5 border-b border-[#E7E5E2] mb-6">
           <div className="flex items-center gap-2">
-            <span className="font-instrument text-2xl tracking-tight text-[#000000]">Aethera</span>
-            <sup className="text-xs font-sans ml-0.5 relative -top-2">°</sup>
+            <span className="font-instrument text-2xl tracking-tight text-[#000000]">Adhira</span>
             <span className="text-xs font-mono text-[#6F6F6F] ml-2">/ PLAN A NEW JOURNEY</span>
           </div>
 

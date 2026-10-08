@@ -198,7 +198,7 @@ export const LumoraTrainExperience = ({
                 }}
                 className="w-full liquid-glass text-white/80 py-3 rounded-full text-xs font-mono text-center cursor-pointer"
               >
-                Return to Aethera Home
+                Return to Adhira Home
               </button>
             </div>
           </div>

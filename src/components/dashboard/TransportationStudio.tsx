@@ -10,7 +10,6 @@ import {
   ExternalLink,
   Loader2,
   RefreshCw,
-  Search,
 } from 'lucide-react';
 import { travelStorage, StoredJourney, StoredTransportItem } from '../../services/travelStorage';
 import { searchFlights, SanitizedFlight } from '../../services/flightService';
@@ -198,7 +197,7 @@ export const TransportationStudio: React.FC<TransportationStudioProps> = ({
   const [flightSearchError, setFlightSearchError] = useState<string | null>(null);
   const [selectedFlight, setSelectedFlight] = useState<SanitizedFlight | null>(null);
   const [passengerName, setPassengerName] = useState('Traveler');
-  const [passengerEmail, setPassengerEmail] = useState('traveler@aethera.luxury');
+  const [passengerEmail, setPassengerEmail] = useState('traveler@adhira.travel');
 
   // Success toast notification state
   const [savedSuccessMsg, setSavedSuccessMsg] = useState<string | null>(null);
@@ -943,10 +942,14 @@ export const TransportationStudio: React.FC<TransportationStudioProps> = ({
 
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 rounded-full px-8 py-3.5 bg-black text-white text-xs font-mono hover:bg-neutral-800 transition-all hover:scale-105 cursor-pointer shadow-md"
+                  className="group relative inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-neutral-950 hover:bg-black text-white text-xs font-mono font-medium uppercase tracking-wider shadow-md hover:shadow-xl hover:shadow-black/25 active:scale-[0.98] transition-all duration-200 cursor-pointer overflow-hidden border border-neutral-800"
                 >
-                  <Search className="w-3.5 h-3.5" />
-                  <span>Search Flights</span>
+                  <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform ease-out pointer-events-none" />
+                  <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                    <Plane className="w-3.5 h-3.5 text-white transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                  </div>
+                  <span className="font-semibold text-white tracking-wider">Search Live Flights</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
                 </button>
               </div>
             </form>

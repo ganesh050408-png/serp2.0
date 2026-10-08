@@ -120,10 +120,18 @@ export async function searchFlights(params: FlightSearchParams): Promise<FlightS
       destinationCode: arrCode,
     };
   } catch (err: any) {
+    const isNetworkErr =
+      err?.name === 'TypeError' ||
+      err?.message === 'Failed to fetch' ||
+      err?.message?.toLowerCase().includes('fetch');
+    const msg = isNetworkErr
+      ? 'Unable to reach the flight search server. Please make sure the server is running on http://localhost:5173 and try again.'
+      : err?.message || 'Unable to connect to flight search service right now.';
+
     return {
       success: false,
       flights: [],
-      error: err?.message || 'Unable to connect to flight search service right now.',
+      error: msg,
       originCode: depCode,
       destinationCode: arrCode,
     };

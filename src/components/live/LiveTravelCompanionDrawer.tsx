@@ -122,7 +122,7 @@ export const LiveTravelCompanionDrawer = ({
         ...prev,
         {
           sender: 'ai',
-          text: error instanceof Error ? error.message : 'Aethera AI is temporarily unavailable. Please try again later.',
+          text: error instanceof Error ? error.message : 'Adhira Assistant is temporarily unavailable. Please try again later.',
         },
       ]);
     } finally {
@@ -174,7 +174,7 @@ export const LiveTravelCompanionDrawer = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-instrument text-2xl text-[#000000] leading-none">
-                    Aethera Live
+                    Adhira Live
                   </h3>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-mono">
                     ONLINE

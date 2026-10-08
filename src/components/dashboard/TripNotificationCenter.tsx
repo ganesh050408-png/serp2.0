@@ -45,7 +45,7 @@ export const TripNotificationCenter: React.FC<TripNotificationCenterProps> = ({
         setPushPermission(perm);
         if (perm === 'granted') {
           setToastMessage('Web Push notifications enabled for trip reminders & weather alerts!');
-          new Notification('Aethera Travel', {
+          new Notification('Adhira Travel', {
             body: 'Trip notifications enabled for upcoming departures and emergency alerts.',
             icon: '/vite.svg',
           });
