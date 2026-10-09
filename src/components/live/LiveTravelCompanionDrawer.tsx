@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, X, Send, Navigation, Car, Stethoscope, Pill, Loader2 } from 'lucide-react';
+import { Sparkles, X, Send, Navigation, Car, Stethoscope, Pill, Loader2, RotateCcw } from 'lucide-react';
 import { callAetheraAI } from '../../services/aiService';
-
 import { StoredJourney } from '../../services/travelStorage';
 
 interface LiveTravelCompanionDrawerProps {
@@ -17,6 +16,8 @@ interface LiveTravelCompanionDrawerProps {
 interface CompanionMessage {
   sender: 'user' | 'ai';
   text: string;
+  isError?: boolean;
+  retryText?: string;
   actions?: {
     label: string;
     action: () => void;
@@ -83,7 +84,7 @@ export const LiveTravelCompanionDrawer = ({
     if (!text.trim() || isLoading) return;
 
     const userMessage: CompanionMessage = { sender: 'user', text };
-    const updatedMsgs: CompanionMessage[] = [...messages, userMessage];
+    const updatedMsgs: CompanionMessage[] = [...messages.filter((m) => !m.isError), userMessage];
     setMessages(updatedMsgs);
     setInputText('');
     setIsLoading(true);
@@ -149,12 +150,14 @@ export const LiveTravelCompanionDrawer = ({
           actions,
         },
       ]);
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           sender: 'ai',
-          text: error instanceof Error ? error.message : 'Adhira Assistant is temporarily unavailable. Please try again later.',
+          text: 'Adhira is having trouble connecting right now. Please try again in a moment.',
+          isError: true,
+          retryText: text,
         },
       ]);
     } finally {
@@ -213,7 +216,7 @@ export const LiveTravelCompanionDrawer = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-[#6F6F6F] font-inter mt-0.5">
-                  Real-time in-destination Claude 3.5 Sonnet assistant
+                  Real-time in-destination travel assistant
                 </p>
               </div>
             </div>
@@ -250,14 +253,29 @@ export const LiveTravelCompanionDrawer = ({
                   className={`max-w-[88%] rounded-2xl p-3.5 leading-relaxed ${
                     m.sender === 'user'
                       ? 'bg-[#000000] text-white rounded-br-none'
+                      : m.isError
+                      ? 'bg-red-50/90 border border-red-200 text-red-950 rounded-bl-none'
                       : 'bg-[#FAF8F5] border border-[#E7E5E2] text-[#000000] rounded-bl-none whitespace-pre-line'
                   }`}
                 >
                   {m.text}
                 </div>
 
+                {/* Retry Button if error */}
+                {m.isError && m.retryText && (
+                  <button
+                    type="button"
+                    onClick={() => handleSend(m.retryText)}
+                    disabled={isLoading}
+                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-neutral-300 hover:border-black text-[11px] font-mono text-neutral-800 hover:text-black transition-colors cursor-pointer bg-white"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Retry</span>
+                  </button>
+                )}
+
                 {/* Companion Action Chips */}
-                {m.actions && m.actions.length > 0 && (
+                {m.actions && m.actions.length > 0 && !m.isError && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {m.actions.map((act, actIdx) => {
                       const Icon = act.icon;
