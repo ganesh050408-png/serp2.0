@@ -156,12 +156,12 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
     }
   };
 
-  // Demo fill helper for testing
   const handleQuickDemo = () => {
-    setEmail('traveler@adhira.journey');
+    setEmail('demo_traveler@adhira.travel');
     setPassword('adhira2026!');
     setUsername('adhira_explorer');
     setConfirmPassword('adhira2026!');
+    setMode('signin');
     setError(null);
   };
 
