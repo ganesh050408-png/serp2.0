@@ -26,7 +26,14 @@ const normalizeMessages = (messages) => {
 };
 export const createGroqChatCompletion = async (messages, contextInfo) => {
     const apiKey = process.env.GROQ_API_KEY?.trim();
-    const model = process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile';
+    const requestedModel = process.env.GROQ_MODEL?.trim() || 'openai/gpt-oss-120b';
+    const candidateModels = [
+        requestedModel,
+        'openai/gpt-oss-120b',
+        'qwen/qwen3.8-27b',
+        'openai/gpt-oss-20b',
+        'llama-3.3-70b-versatile',
+    ].filter((m, i, arr) => arr.indexOf(m) === i);
     if (!apiKey) {
         throw new ApiError(503, 'Groq AI is not configured on the server. Please add GROQ_API_KEY in backend .env', 'AI_NOT_CONFIGURED');
     }
@@ -37,55 +44,64 @@ export const createGroqChatCompletion = async (messages, contextInfo) => {
     const systemInstruction = contextInfo?.trim()
         ? `${SYSTEM_PROMPT}\n\n[Active Trip Context]\n${contextInfo.trim()}`
         : SYSTEM_PROMPT;
-    const payload = {
-        model,
-        messages: [
-            { role: 'system', content: systemInstruction },
-            ...userMessages,
-        ],
-        temperature: 0.7,
-        max_tokens: 800,
-    };
-    try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorJson = null;
-            try {
-                errorJson = JSON.parse(errorText);
+    let lastError = null;
+    for (const currentModel of candidateModels) {
+        const payload = {
+            model: currentModel,
+            messages: [
+                { role: 'system', content: systemInstruction },
+                ...userMessages,
+            ],
+            temperature: 0.7,
+            max_tokens: 800,
+        };
+        try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorJson = null;
+                try {
+                    errorJson = JSON.parse(errorText);
+                }
+                catch {
+                    // ignore
+                }
+                const msg = errorJson?.error?.message || '';
+                // If this model does not exist or user lacks access, gracefully fallback to next model
+                if (msg.includes('does not exist') || msg.includes('do not have access') || response.status === 404) {
+                    console.warn(`Groq model "${currentModel}" unavailable: ${msg}. Trying fallback...`);
+                    lastError = new ApiError(502, msg, 'AI_PROVIDER_ERROR');
+                    continue;
+                }
+                if (response.status === 429) {
+                    throw new ApiError(429, 'Groq AI is currently rate-limited. Please try again in a moment.', 'AI_PROVIDER_RATE_LIMITED');
+                }
+                if (response.status === 401) {
+                    throw new ApiError(401, 'Invalid Groq API Key. Please verify your GROQ_API_KEY in .env.', 'AI_INVALID_KEY');
+                }
+                throw new ApiError(502, msg || `Groq API returned error status ${response.status}`, 'AI_PROVIDER_ERROR');
             }
-            catch {
-                // ignore
+            const data = await response.json();
+            const text = data?.choices?.[0]?.message?.content?.trim();
+            if (!text) {
+                throw new ApiError(502, 'Groq AI returned an empty response.', 'AI_EMPTY_RESPONSE');
             }
-            console.error('Groq API error response:', response.status, errorText);
-            if (response.status === 429) {
-                throw new ApiError(429, 'Groq AI is currently rate-limited. Please try again in a moment.', 'AI_PROVIDER_RATE_LIMITED');
-            }
-            if (response.status === 401) {
-                throw new ApiError(401, 'Invalid Groq API Key. Please verify your GROQ_API_KEY in .env.', 'AI_INVALID_KEY');
-            }
-            throw new ApiError(502, errorJson?.error?.message || `Groq API returned error status ${response.status}`, 'AI_PROVIDER_ERROR');
+            return text;
         }
-        const data = await response.json();
-        const text = data?.choices?.[0]?.message?.content?.trim();
-        if (!text) {
-            throw new ApiError(502, 'Groq AI returned an empty response.', 'AI_EMPTY_RESPONSE');
+        catch (err) {
+            if (err instanceof ApiError && err.code !== 'AI_PROVIDER_ERROR') {
+                throw err;
+            }
+            lastError = err;
         }
-        return text;
     }
-    catch (error) {
-        if (error instanceof ApiError) {
-            throw error;
-        }
-        console.error('Groq request exception:', error);
-        throw new ApiError(502, error?.message || 'Unable to connect to Groq AI provider.', 'AI_PROVIDER_ERROR');
-    }
+    throw lastError || new ApiError(502, 'Unable to connect to Groq AI provider.', 'AI_PROVIDER_ERROR');
 };
 //# sourceMappingURL=groqService.js.map

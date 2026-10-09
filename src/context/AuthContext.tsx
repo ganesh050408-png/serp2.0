@@ -190,7 +190,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (error) {
         if (error.message.toLowerCase().includes('invalid login credentials')) {
-          return { success: false, error: 'Invalid email or password. Please verify your credentials and try again.' };
+          return {
+            success: false,
+            error: 'Invalid email or password. If you haven’t registered on this project yet, please switch to the "Sign Up" tab to create your account first.',
+          };
         }
         if (error.message.toLowerCase().includes('email not confirmed')) {
           return { success: false, error: 'Please verify your email address before signing in. Check your inbox for the confirmation link.' };

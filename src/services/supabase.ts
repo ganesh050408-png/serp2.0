@@ -2,11 +2,11 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ||
-  'https://zddythsszyznsguiuiss.supabase.co';
+  'https://kdviohhabwnipslaiotn.supabase.co';
 
 const supabaseAnonKey =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZHl0aHNzenl6bnNndWl1aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NTk1NTMsImV4cCI6MjEwMTQzNTU1M30.NCWlpWUEQKxHWtvjkpUxeGQdI6MV3rkVZ2kHZPLL2RY';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkdmlvaGhhYnduaXBzbGFpb3RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1NDY3MDUsImV4cCI6MjEwNzEyMjcwNX0.Ti8kW2B9DeaWWQmUY7gDS-VjddEggmxDXcrTsN57yyo';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
