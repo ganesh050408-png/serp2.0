@@ -6,6 +6,7 @@ import { DashboardPage } from './components/dashboard/DashboardPage';
 import { JourneyPlanner } from './components/dashboard/JourneyPlanner';
 import { JourneyDetail } from './components/dashboard/JourneyDetail';
 import { TripProvider } from './context/TripContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 import { LumoraTrainExperience } from './components/LumoraTrainExperience';
 import { ScenicTrainAuth } from './components/auth/ScenicTrainAuth';
@@ -14,7 +15,9 @@ import { JourneyCalendar } from './components/dashboard/JourneyCalendar';
 import { HospitalsPage } from './components/dashboard/HospitalsPage';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
-export function App() {
+function AppContent() {
+  const { user, isLoading } = useAuth();
+
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'dashboard'>(() => {
     if (typeof window !== 'undefined') {
       if (window.location.search.includes('join=')) {
@@ -58,6 +61,49 @@ export function App() {
   };
 
   const journeyId = getJourneyIdFromPath(currentPath);
+
+  // Protected route enforcement
+  useEffect(() => {
+    if (isLoading) return;
+
+    const isExplicitAuthPath = currentPath === '/auth' || currentPath === '/auth/journey';
+    const isProtectedPath =
+      currentPath.startsWith('/plan') ||
+      currentPath.startsWith('/planner') ||
+      currentPath.startsWith('/journey') ||
+      currentPath.startsWith('/journeys') ||
+      currentPath.startsWith('/train') ||
+      currentPath.startsWith('/lumora') ||
+      currentPath.startsWith('/hospitals');
+
+    // If logged out and attempting to access a protected path or dashboard view
+    if (!user) {
+      if (isProtectedPath || currentView === 'dashboard') {
+        setCurrentView('auth');
+        if (!isExplicitAuthPath) {
+          navigate('/auth');
+        }
+      }
+    } else {
+      // If logged in and on the auth page, proceed to dashboard
+      if (isExplicitAuthPath || currentView === 'auth') {
+        setCurrentView('dashboard');
+        if (currentPath.startsWith('/auth')) {
+          navigate('/');
+        }
+      }
+    }
+  }, [user, isLoading, currentPath, currentView]);
+
+  // Loading state placeholder while resolving initial session
+  if (isLoading) {
+    return (
+      <div className="w-full h-screen bg-[#FAF8F5] flex flex-col items-center justify-center font-sans">
+        <div className="w-8 h-8 border-2 border-black/20 border-t-black rounded-full animate-spin mb-4" />
+        <span className="font-mono text-xs text-[#6F6F6F] tracking-widest uppercase">Restoring Sanctuary Session...</span>
+      </div>
+    );
+  }
 
   // Render correct view based on path
   const renderPathView = () => {
@@ -136,10 +182,24 @@ export function App() {
         <VideoBackground />
 
         {/* Navigation Bar */}
-        <Navbar onBeginJourney={() => setCurrentView('auth')} />
+        <Navbar onBeginJourney={() => {
+          if (user) {
+            setCurrentView('dashboard');
+          } else {
+            setCurrentView('auth');
+            navigate('/auth');
+          }
+        }} />
 
         {/* Hero Section centered in the dashboard */}
-        <HeroSection onBeginJourney={() => setCurrentView('auth')} />
+        <HeroSection onBeginJourney={() => {
+          if (user) {
+            setCurrentView('dashboard');
+          } else {
+            setCurrentView('auth');
+            navigate('/auth');
+          }
+        }} />
 
         {/* Spacer to perfectly balance the navbar height on desktop */}
         <div className="hidden md:block h-[88px] pointer-events-none" />
@@ -153,11 +213,19 @@ export function App() {
   };
 
   return (
-    <TripProvider>
-      <div className="w-full min-h-screen font-sans bg-white">
-        {renderPathView()}
-      </div>
-    </TripProvider>
+    <div className="w-full min-h-screen font-sans bg-white">
+      {renderPathView()}
+    </div>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <TripProvider>
+        <AppContent />
+      </TripProvider>
+    </AuthProvider>
   );
 }
 

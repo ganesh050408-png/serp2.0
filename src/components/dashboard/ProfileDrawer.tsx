@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { travelStorage, UserProfile } from '../../services/travelStorage';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProfileDrawerProps {
   isOpen: boolean;
@@ -25,7 +26,19 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   onClose,
   onNavigate,
 }) => {
-  const [profile, setProfile] = useState<UserProfile>(travelStorage.getProfile());
+  const { user, profile: supabaseProfile, updateProfile, signOut } = useAuth();
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    const p = travelStorage.getProfile();
+    if (supabaseProfile) {
+      return {
+        ...p,
+        name: supabaseProfile.full_name || supabaseProfile.username || p.name,
+        email: supabaseProfile.email || p.email,
+        avatar: (supabaseProfile.username?.[0] || p.avatar || 'U').toUpperCase(),
+      };
+    }
+    return p;
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(profile.name);
   const [editEmail, setEditEmail] = useState(profile.email);
@@ -45,9 +58,17 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   useEffect(() => {
     if (isOpen) {
       const p = travelStorage.getProfile();
-      setProfile(p);
-      setEditName(p.name);
-      setEditEmail(p.email);
+      const currentName = supabaseProfile?.full_name || supabaseProfile?.username || p.name;
+      const currentEmail = supabaseProfile?.email || p.email;
+      const merged: UserProfile = {
+        ...p,
+        name: currentName,
+        email: currentEmail,
+        avatar: (supabaseProfile?.username?.[0] || p.avatar || 'U').toUpperCase(),
+      };
+      setProfile(merged);
+      setEditName(currentName);
+      setEditEmail(currentEmail);
       setEditPhone(p.phone);
       setEditBio(p.bio);
       const isKnown = ['Prefer not to say', 'Hinduism', 'Islam', 'Christianity', 'Buddhism', 'Jainism', 'Sikhism', 'Judaism'].includes(p.religion || '');
@@ -62,11 +83,11 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen]);
+  }, [isOpen, supabaseProfile]);
 
   if (!isOpen) return null;
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalReligion = editReligion === 'Other' ? (editCustomReligion.trim() || 'Other') : editReligion;
     const updated: UserProfile = {
@@ -81,14 +102,23 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     };
     travelStorage.saveProfile(updated);
     setProfile(updated);
+
+    // Persist changes to Supabase public.profiles if user is authenticated
+    if (user) {
+      await updateProfile({
+        full_name: editName,
+        email: editEmail,
+      });
+    }
+
     setIsEditing(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('Are you sure you want to sign out of Adhira?')) {
-      travelStorage.clearSession();
+      await signOut();
       onClose();
       if (onNavigate) {
         onNavigate('/');
@@ -123,9 +153,16 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
               {profile.avatar}
             </div>
             <div>
-              <h3 className="font-instrument text-2xl text-[#000000] leading-tight">
-                {profile.name}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-instrument text-2xl text-[#000000] leading-tight">
+                  {profile.name}
+                </h3>
+                {supabaseProfile?.username && (
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-neutral-100 border border-[#E7E5E2] text-neutral-600">
+                    @{supabaseProfile.username}
+                  </span>
+                )}
+              </div>
               <span className="text-xs font-mono text-[#6F6F6F]">{profile.email}</span>
             </div>
           </div>

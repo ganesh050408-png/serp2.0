@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowUpRight, Plus } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface DashboardHeroProps {
   onPlanNew: () => void;
@@ -8,6 +9,9 @@ interface DashboardHeroProps {
 }
 
 export const DashboardHero = ({ onPlanNew, onExplore, onOpenTrain }: DashboardHeroProps) => {
+  const { profile, user } = useAuth();
+  const displayName = profile?.username || profile?.full_name || user?.user_metadata?.username || 'Explorer';
+
   // Key state to reset and trigger exactly one train journey animation on every mouse enter
   const [trainKey, setTrainKey] = useState<number | null>(null);
 
@@ -26,7 +30,7 @@ export const DashboardHero = ({ onPlanNew, onExplore, onOpenTrain }: DashboardHe
         <div className="flex flex-wrap items-center justify-center gap-2 mb-6 animate-fade-rise">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-100/90 text-xs text-[#6F6F6F] font-inter">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Good morning, Aravind</span>
+            <span>Welcome, {displayName}</span>
             <span className="text-neutral-300">•</span>
             <span>Your next journey awaits</span>
           </div>

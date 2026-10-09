@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, User, Menu, X, ArrowLeft, Hospital, Bell } from 'lucide-react';
 import { travelStorage } from '../../services/travelStorage';
+import { useAuth } from '../../context/AuthContext';
 
 interface DashboardNavbarProps {
   onOpenAI: () => void;
@@ -23,10 +24,14 @@ export const DashboardNavbar = ({
   tripMode,
   onToggleTripMode,
 }: DashboardNavbarProps) => {
+  const { profile, user } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeItem, setActiveItem] = useState('Home');
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const displayName = profile?.username || profile?.full_name || user?.user_metadata?.username || user?.email?.split('@')[0] || 'Traveler';
+  const initial = (displayName.charAt(0) || 'U').toUpperCase();
 
   useEffect(() => {
     const unread = travelStorage.getNotifications().filter((n) => !n.read).length;
@@ -257,9 +262,9 @@ export const DashboardNavbar = ({
             aria-label="User profile"
           >
             <div className="w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px] font-sans font-semibold">
-              A
+              {initial}
             </div>
-            <span className="hidden xl:inline font-sans text-xs text-neutral-800">Aravind S.</span>
+            <span className="hidden xl:inline font-sans text-xs text-neutral-800">{displayName}</span>
           </button>
         </div>
 
@@ -349,7 +354,7 @@ export const DashboardNavbar = ({
               className="flex items-center gap-2 text-xs text-[#000000] hover:underline"
             >
               <User className="w-4 h-4 text-[#6F6F6F]" />
-              <span>Aravind S. (Profile & Settings)</span>
+              <span>{displayName} (Profile & Settings)</span>
             </button>
             {onGoToLanding && (
               <button

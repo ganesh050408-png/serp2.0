@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, X, Sparkles, AlertCircle, Lock, Mail, User as UserIcon } from 'lucide-react';
-import { travelStorage } from '../../services/travelStorage';
+import { ArrowLeft, ArrowRight, X, Sparkles, AlertCircle, Lock, Mail, User as UserIcon, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface ScenicTrainAuthProps {
   onAuthSuccess: () => void;
@@ -31,33 +31,33 @@ const SCENES = [
 ];
 
 export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess, onBack }) => {
+  const { signIn, signUp } = useAuth();
   const [activeVideo, setActiveVideo] = useState<number>(() => Math.floor(Math.random() * SCENES.length));
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEnteringJourney, setIsEnteringJourney] = useState(false);
+  const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false);
 
   useEffect(() => {
     let timeoutId: number;
 
     const scheduleNextTransition = () => {
-      // Random delay between 5000ms and 6000ms (5–6 seconds)
+      // Transition video background every 5–6 seconds
       const delay = Math.floor(Math.random() * 1000) + 5000;
 
       timeoutId = window.setTimeout(() => {
         setActiveVideo((current) => {
-          // Exclude the current active scene so we never select the same background twice in a row
           const candidates = SCENES
             .map((_, idx) => idx)
             .filter((idx) => idx !== current);
           const nextIndex = candidates[Math.floor(Math.random() * candidates.length)];
           return nextIndex;
         });
-
-        // After each background change, schedule next transition with a new random delay
         scheduleNextTransition();
       }, delay);
     };
@@ -73,76 +73,95 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
 
   const validateForm = (): boolean => {
     setError(null);
-    if (!email.trim() || !email.includes('@') || !email.includes('.')) {
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
       setError('Please enter a valid email address.');
       return false;
     }
+
     if (!password || password.length < 6) {
       setError('Password must contain at least 6 characters.');
       return false;
     }
-    if (mode === 'signup' && !name.trim()) {
-      setError('Please enter your full name.');
-      return false;
+
+    if (mode === 'signup') {
+      const cleanUsername = username.trim().toLowerCase();
+      if (!cleanUsername || cleanUsername.length < 3) {
+        setError('Username must be at least 3 characters.');
+        return false;
+      }
+
+      if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+        setError('Username may only contain letters, numbers, underscores, hyphens, and dots.');
+        return false;
+      }
+
+      // Confirm password validation only (never stored)
+      if (password !== confirmPassword) {
+        setError('Passwords do not match. Please re-enter your password.');
+        return false;
+      }
     }
+
     return true;
   };
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm() || isSubmitting) return;
 
     setIsSubmitting(true);
     setError(null);
 
-    // Simulate authenticating against existing user session and local storage
-    setTimeout(() => {
-      try {
-        const sessionPayload = {
-          token: 'aethera_jwt_' + Math.random().toString(36).substring(2, 15),
-          user: {
-            name: mode === 'signup' ? name.trim() : (name.trim() || 'Aravind S.'),
-            email: email.trim(),
-            avatar: 'A',
-          },
-          authenticatedAt: new Date().toISOString(),
-        };
-
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('aethera.auth_token', sessionPayload.token);
-          window.localStorage.setItem('aethera.session', JSON.stringify(sessionPayload));
+    try {
+      if (mode === 'signup') {
+        const result = await signUp(username.trim(), email.trim(), password);
+        if (!result.success) {
+          setIsSubmitting(false);
+          setError(result.error || 'Registration encountered an issue. Please try again.');
+          return;
         }
 
-        // Save profile if signup
-        if (mode === 'signup' && name.trim()) {
-          const currentProfile = travelStorage.getProfile();
-          travelStorage.saveProfile({
-            ...currentProfile,
-            name: name.trim(),
-            email: email.trim(),
-          });
+        if (result.requiresEmailConfirmation) {
+          setIsSubmitting(false);
+          setEmailConfirmationRequired(true);
+          return;
         }
 
-        // Trigger cinematic departure transition
+        // Auto logged-in upon sign-up
         setIsSubmitting(false);
         setIsEnteringJourney(true);
-
         setTimeout(() => {
           onAuthSuccess();
         }, 1200);
-      } catch {
+      } else {
+        // Sign-in flow
+        const result = await signIn(email.trim(), password);
+        if (!result.success) {
+          setIsSubmitting(false);
+          setError(result.error || 'Invalid credentials. Please verify your email and password.');
+          return;
+        }
+
         setIsSubmitting(false);
-        setError('Authentication encounter an issue. Please try again.');
+        setIsEnteringJourney(true);
+        setTimeout(() => {
+          onAuthSuccess();
+        }, 1200);
       }
-    }, 900);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setError(err?.message || 'Authentication encountered an unexpected network error. Please try again.');
+    }
   };
 
-  // Quick Demo Guest Fill
+  // Demo fill helper for testing
   const handleQuickDemo = () => {
-    setEmail('aravind.s@adhira.travel');
-    setPassword('secret123');
-    setName('Aravind S.');
-    setMode('signin');
+    setEmail('traveler@adhira.journey');
+    setPassword('adhira2026!');
+    setUsername('adhira_explorer');
+    setConfirmPassword('adhira2026!');
     setError(null);
   };
 
@@ -186,7 +205,7 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
       </div>
 
       {/* 3. Interactive Content Layer */}
-      <div className="relative z-10 w-full h-full flex flex-col justify-between px-6 sm:px-12 py-6 sm:py-8">
+      <div className="relative z-10 w-full h-full flex flex-col justify-between px-6 sm:px-12 py-6 sm:py-8 overflow-y-auto">
         
         {/* Top Header with Back / Return */}
         <header className="w-full max-w-7xl mx-auto flex items-center justify-between">
@@ -211,10 +230,10 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
               type="button"
               onClick={handleQuickDemo}
               className="hidden sm:inline-flex liquid-glass rounded-full px-4 py-1.5 text-xs font-mono text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer items-center gap-1.5 border border-white/20"
-              title="Auto-fill demo credentials"
+              title="Auto-fill sample credentials"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Fill Demo Account</span>
+              <span>Fill Sample Data</span>
             </button>
 
             <button
@@ -230,7 +249,7 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
         </header>
 
         {/* Center: Cinematic Scenic Authentication Card */}
-        <main className="max-w-md w-full mx-auto my-auto flex flex-col items-center justify-center">
+        <main className="max-w-md w-full mx-auto my-auto flex flex-col items-center justify-center py-6">
           {isEnteringJourney ? (
             /* Cinematic Transition View */
             <div className="text-center animate-fade-rise flex flex-col items-center justify-center py-12">
@@ -242,28 +261,54 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
                 Entering Journey
               </h2>
               <p className="font-inter text-sm text-white/70 tracking-wide">
-                Preparing your private luxury travel studio...
+                Connecting to your verified Supabase session...
               </p>
+            </div>
+          ) : emailConfirmationRequired ? (
+            /* Email Confirmation Sent Notification */
+            <div className="w-full liquid-glass rounded-3xl p-8 sm:p-10 shadow-2xl border border-white/25 bg-black/60 backdrop-blur-xl animate-fade-rise text-white text-center">
+              <div className="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto mb-5">
+                <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+              </div>
+              <h3 className="font-instrument text-2xl sm:text-3xl text-white mb-2">
+                Check Your Inbox
+              </h3>
+              <p className="text-xs sm:text-sm text-white/80 mb-6 font-inter leading-relaxed">
+                We sent an authentication confirmation link to <span className="font-semibold text-white">{email}</span>. Click the link in your email to verify your account, then sign in.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailConfirmationRequired(false);
+                  setMode('signin');
+                  setError(null);
+                }}
+                className="w-full rounded-full py-3 px-6 bg-white text-black font-medium text-sm transition-all hover:bg-neutral-100 shadow-xl cursor-pointer"
+              >
+                Return to Sign In
+              </button>
             </div>
           ) : (
             /* Glassmorphic Auth Form */
             <div className="w-full liquid-glass rounded-3xl p-8 sm:p-10 shadow-2xl border border-white/25 bg-black/40 backdrop-blur-xl animate-fade-rise text-white">
               
               {/* Brand Title */}
-              <div className="text-center mb-8">
+              <div className="text-center mb-6">
                 <span className="font-instrument text-4xl sm:text-5xl tracking-tight text-white block mb-2 leading-none">
                   Adhira
                 </span>
                 <h3 className="font-instrument text-2xl text-white/95 font-normal">
-                  Welcome to Adhira
+                  {mode === 'signin' ? 'Welcome Back' : 'Create Your Account'}
                 </h3>
                 <p className="text-xs font-inter text-white/70 mt-1">
-                  Begin your journey with us.
+                  {mode === 'signin'
+                    ? 'Sign in to access your curated travel sanctuary.'
+                    : 'Register with Supabase Auth to begin your bespoke journeys.'}
                 </p>
               </div>
 
               {/* Mode Toggle Tabs */}
-              <div className="flex rounded-full bg-white/10 p-1 mb-6 border border-white/15">
+              <div className="flex rounded-full bg-white/10 p-1 mb-5 border border-white/15">
                 <button
                   type="button"
                   onClick={() => {
@@ -296,36 +341,37 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
 
               {/* Error Alert */}
               {error && (
-                <div className="mb-5 px-3.5 py-2.5 rounded-2xl bg-red-500/20 border border-red-500/40 backdrop-blur-md flex items-center gap-2.5 text-xs text-red-200 animate-fade-rise">
+                <div className="mb-4 px-3.5 py-2.5 rounded-2xl bg-red-500/20 border border-red-500/40 backdrop-blur-md flex items-center gap-2.5 text-xs text-red-200 animate-fade-rise">
                   <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
                   <span>{error}</span>
                 </div>
               )}
 
               {/* Form Fields */}
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
+              <form onSubmit={handleAuthSubmit} className="space-y-3.5">
                 {mode === 'signup' && (
                   <div>
-                    <label className="block text-[11px] font-mono uppercase tracking-wider text-white/75 mb-1.5">
-                      Full Name
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-white/75 mb-1">
+                      Username
                     </label>
                     <div className="relative">
                       <input
                         type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Aravind S."
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="aravind_travels"
                         required
-                        className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white focus:bg-white/15 transition-all"
+                        autoComplete="username"
+                        className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white focus:bg-white/15 transition-all"
                       />
-                      <UserIcon className="w-4 h-4 text-white/40 absolute right-3.5 top-3.5 pointer-events-none" />
+                      <UserIcon className="w-4 h-4 text-white/40 absolute right-3.5 top-3 pointer-events-none" />
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-white/75 mb-1.5">
-                    Email
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-white/75 mb-1">
+                    Email Address
                   </label>
                   <div className="relative">
                     <input
@@ -334,14 +380,15 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="aravind@adhira.travel"
                       required
-                      className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white focus:bg-white/15 transition-all"
+                      autoComplete="email"
+                      className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white focus:bg-white/15 transition-all"
                     />
-                    <Mail className="w-4 h-4 text-white/40 absolute right-3.5 top-3.5 pointer-events-none" />
+                    <Mail className="w-4 h-4 text-white/40 absolute right-3.5 top-3 pointer-events-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-white/75 mb-1.5">
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-white/75 mb-1">
                     Password
                   </label>
                   <div className="relative">
@@ -351,27 +398,48 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white focus:bg-white/15 transition-all"
+                      autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                      className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white focus:bg-white/15 transition-all"
                     />
-                    <Lock className="w-4 h-4 text-white/40 absolute right-3.5 top-3.5 pointer-events-none" />
+                    <Lock className="w-4 h-4 text-white/40 absolute right-3.5 top-3 pointer-events-none" />
                   </div>
                 </div>
+
+                {mode === 'signup' && (
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-white/75 mb-1">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        autoComplete="new-password"
+                        className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white focus:bg-white/15 transition-all"
+                      />
+                      <Lock className="w-4 h-4 text-white/40 absolute right-3.5 top-3 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
 
                 {/* Continue CTA Button */}
                 <div className="pt-2">
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full rounded-full py-3.5 px-6 bg-white text-black font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-neutral-100 shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full rounded-full py-3 px-6 bg-white text-black font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-neutral-100 shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                        <span>Entering journey...</span>
+                        <span>{mode === 'signup' ? 'Creating account...' : 'Authenticating...'}</span>
                       </>
                     ) : (
                       <>
-                        <span>Continue</span>
+                        <span>{mode === 'signup' ? 'Create Account' : 'Sign In'}</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
@@ -380,7 +448,7 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
               </form>
 
               {/* Mode Switcher Footer */}
-              <div className="mt-6 pt-4 border-t border-white/10 text-center">
+              <div className="mt-5 pt-3 border-t border-white/10 text-center">
                 {mode === 'signin' ? (
                   <p className="text-xs text-white/70 font-inter">
                     New to Adhira?{' '}
@@ -420,12 +488,12 @@ export const ScenicTrainAuth: React.FC<ScenicTrainAuthProps> = ({ onAuthSuccess,
           <div className="flex items-center gap-3 text-xs text-white/60 font-mono">
             <span>Scenic Railway Voyage</span>
             <span>•</span>
-            <span>Adhira Authentication Engine</span>
+            <span>Supabase Auth Engine</span>
           </div>
 
           <div className="hidden sm:flex items-center gap-2 text-xs text-white/40 font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-pulse" />
-            <span>Autonomous Ambient Journey</span>
+            <span>Encrypted Session Storage</span>
           </div>
         </footer>
       </div>
