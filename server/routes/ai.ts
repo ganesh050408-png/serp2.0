@@ -71,8 +71,8 @@ const parseRequest = (body: unknown): {
 aiRouter.post('/chat', async (req, res, next) => {
   try {
     const { messages, contextInfo } = parseRequest(req.body);
-    const text = await createGroqChatCompletion(messages, contextInfo);
-    res.json({ text });
+    const result = await createGroqChatCompletion(messages, contextInfo);
+    res.json({ text: result.text, modelUsed: result.modelUsed });
   } catch (error) {
     next(error);
   }

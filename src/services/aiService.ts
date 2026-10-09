@@ -1,17 +1,21 @@
 // Aethera AI Service
-// Provider credentials are kept by the server-side API proxy.
+// Provider credentials are kept safely by the server-side API proxy.
 
-const GENERIC_AI_ERROR = 'Adhira Assistant is temporarily unavailable. Please try again later.';
+const FRIENDLY_AI_ERROR = 'Adhira is having trouble connecting right now. Please try again in a moment.';
 
-class AIServiceError extends Error {
-  constructor(message: string) {
+export class AIServiceError extends Error {
+  public isRetryable: boolean;
+
+  constructor(message: string, isRetryable = true) {
     super(message);
     this.name = 'AIServiceError';
+    this.isRetryable = isRetryable;
   }
 }
 
 interface AIChatResponse {
   text?: unknown;
+  modelUsed?: unknown;
   error?: unknown;
 }
 
@@ -24,7 +28,7 @@ export const callAetheraAI = async (
     .map((m) => ({ ...m, text: m.text.trim() }));
 
   if (formattedMessages.length === 0) {
-    throw new AIServiceError('Please enter a message before asking Adhira.');
+    throw new AIServiceError('Please enter a message before asking Adhira.', false);
   }
 
   try {
@@ -37,18 +41,20 @@ export const callAetheraAI = async (
     const data = (await response.json().catch(() => null)) as AIChatResponse | null;
 
     if (!response.ok) {
-      throw new AIServiceError(typeof data?.error === 'string' ? data.error : GENERIC_AI_ERROR);
+      console.warn('[Adhira Client] AI Request failed with status:', response.status);
+      throw new AIServiceError(FRIENDLY_AI_ERROR, true);
     }
 
     if (typeof data?.text === 'string' && data.text.trim()) {
       return data.text.trim();
     }
 
-    throw new AIServiceError(GENERIC_AI_ERROR);
+    throw new AIServiceError(FRIENDLY_AI_ERROR, true);
   } catch (error) {
     if (error instanceof AIServiceError) {
       throw error;
     }
-    throw new AIServiceError(GENERIC_AI_ERROR);
+    console.error('[Adhira Client] Exception during AI call:', error);
+    throw new AIServiceError(FRIENDLY_AI_ERROR, true);
   }
 };
