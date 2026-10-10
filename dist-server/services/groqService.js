@@ -68,15 +68,15 @@ const isModelNotFoundError = (status, errorText) => {
         lower.includes('invalid_model'));
 };
 export const createGroqChatCompletion = async (messages, contextInfo) => {
-    const apiKey = process.env.GROQ_API_KEY?.trim();
-    const requestedModel = process.env.GROQ_MODEL?.trim() || 'openai/gpt-oss-120b';
-    const candidateModels = [
-        requestedModel,
-        'openai/gpt-oss-120b',
-        'qwen/qwen3.8-27b',
-        'openai/gpt-oss-20b',
-        'llama-3.3-70b-versatile',
-    ].filter((m, i, arr) => arr.indexOf(m) === i);
+    const apiKey = process.env.GROQ_API_KEY?.trim() || process.env.LLM_API_KEY?.trim();
+    const baseUrl = process.env.LLM_BASE_URL?.trim() || 'https://api.groq.com/openai/v1';
+    const primaryModel = process.env.LLM_MODEL?.trim() || process.env.GROQ_MODEL?.trim() || 'qwen/qwen3.8-27b';
+    const rawFallbacks = process.env.LLM_FALLBACK_MODELS || 'openai/gpt-oss-120b,openai/gpt-oss-20b';
+    const fallbackModels = rawFallbacks
+        .split(',')
+        .map((m) => m.trim())
+        .filter((m) => m.length > 0 && m !== primaryModel);
+    const modelChain = [primaryModel, ...fallbackModels];
     if (!apiKey) {
         console.error('[Adhira LLM] Missing API key: GROQ_API_KEY or LLM_API_KEY is not set');
         throw new ApiError(503, 'Adhira is having trouble connecting right now. Please try again in a moment.', 'AI_NOT_CONFIGURED');
@@ -85,22 +85,37 @@ export const createGroqChatCompletion = async (messages, contextInfo) => {
     if (userMessages.length === 0) {
         throw new ApiError(400, 'At least one user message is required.', 'INVALID_AI_REQUEST');
     }
-    const systemInstruction = contextInfo?.trim()
-        ? `${SYSTEM_PROMPT}\n\n[Active Trip Context]\n${contextInfo.trim()}`
-        : SYSTEM_PROMPT;
+    // Extract latest user prompt to perform proactive live research
+    const lastUserMsg = [...userMessages].reverse().find((m) => m.role === 'user');
+    let researchDossier = null;
+    let liveResearchContext = '';
+    if (lastUserMsg?.content) {
+        try {
+            researchDossier = await performTravelResearch(lastUserMsg.content);
+            if (researchDossier?.formattedResearchNote) {
+                liveResearchContext = `\n\n[Live Travel Research Dossier]\n${researchDossier.formattedResearchNote}`;
+            }
+        }
+        catch (err) {
+            console.warn('[Adhira LLM] Research enrichment skipped:', err);
+        }
+    }
+    const activeTripContext = contextInfo?.trim() ? `\n\n[Active User & Trip Context]\n${contextInfo.trim()}` : '';
+    const finalSystemInstruction = `${SYSTEM_PROMPT}${activeTripContext}${liveResearchContext}`;
     let lastError = null;
-    for (const currentModel of candidateModels) {
+    for (let i = 0; i < modelChain.length; i++) {
+        const currentModel = modelChain[i];
         const payload = {
             model: currentModel,
             messages: [
-                { role: 'system', content: systemInstruction },
+                { role: 'system', content: finalSystemInstruction },
                 ...userMessages,
             ],
             temperature: 0.7,
-            max_tokens: 800,
+            max_tokens: 900,
         };
         try {
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/chat/completions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -110,42 +125,53 @@ export const createGroqChatCompletion = async (messages, contextInfo) => {
             });
             if (!response.ok) {
                 const errorText = await response.text();
-                let errorJson = null;
-                try {
-                    errorJson = JSON.parse(errorText);
+                console.error(`[Adhira LLM] Model ${currentModel} returned error: ${response.status} - ${errorText}`);
+                // 401 / 403: Bad key - fatal, do not retry
+                if (response.status === 401 || response.status === 403) {
+                    throw new ApiError(401, 'Adhira is having trouble connecting right now. Please try again in a moment.', 'AI_INVALID_KEY');
                 }
-                catch {
-                    // ignore
+                // 429: If alternative models exist in chain, try next model before failing
+                if (response.status === 429) {
+                    if (i < modelChain.length - 1) {
+                        console.warn(`[Adhira LLM Fallback] Model "${currentModel}" rate limited (429). Retrying with fallback "${modelChain[i + 1]}"...`);
+                        lastError = new Error(`Model ${currentModel} rate limited`);
+                        continue;
+                    }
+                    throw new ApiError(429, 'Adhira is currently receiving high traffic. Please try again in a moment.', 'AI_PROVIDER_RATE_LIMITED');
                 }
-                const msg = errorJson?.error?.message || '';
-                // If this model does not exist or user lacks access, gracefully fallback to next model
-                if (msg.includes('does not exist') || msg.includes('do not have access') || response.status === 404) {
-                    console.warn(`Groq model "${currentModel}" unavailable: ${msg}. Trying fallback...`);
-                    lastError = new ApiError(502, msg, 'AI_PROVIDER_ERROR');
+                // Check if model not found/decommissioned -> trigger fallback
+                if (isModelNotFoundError(response.status, errorText) && i < modelChain.length - 1) {
+                    console.warn(`[Adhira LLM Fallback] Model "${currentModel}" unavailable (${response.status}). Retrying with fallback "${modelChain[i + 1]}"...`);
+                    lastError = new Error(`Model ${currentModel} unavailable: ${errorText}`);
                     continue;
                 }
-                if (response.status === 429) {
-                    throw new ApiError(429, 'Groq AI is currently rate-limited. Please try again in a moment.', 'AI_PROVIDER_RATE_LIMITED');
-                }
-                if (response.status === 401) {
-                    throw new ApiError(401, 'Invalid Groq API Key. Please verify your GROQ_API_KEY in .env.', 'AI_INVALID_KEY');
-                }
-                throw new ApiError(502, msg || `Groq API returned error status ${response.status}`, 'AI_PROVIDER_ERROR');
+                throw new ApiError(502, 'Adhira is having trouble connecting right now. Please try again in a moment.', 'AI_PROVIDER_ERROR');
             }
             const data = await response.json();
             const text = data?.choices?.[0]?.message?.content?.trim();
             if (!text) {
-                throw new ApiError(502, 'Groq AI returned an empty response.', 'AI_EMPTY_RESPONSE');
+                if (i < modelChain.length - 1) {
+                    console.warn(`[Adhira LLM] Empty response from ${currentModel}, trying fallback ${modelChain[i + 1]}...`);
+                    continue;
+                }
+                throw new ApiError(502, 'Adhira is having trouble connecting right now. Please try again in a moment.', 'AI_EMPTY_RESPONSE');
             }
-            return text;
+            return { text, modelUsed: currentModel, researchDossier };
         }
-        catch (err) {
-            if (err instanceof ApiError && err.code !== 'AI_PROVIDER_ERROR') {
-                throw err;
+        catch (error) {
+            if (error instanceof ApiError) {
+                if (error.statusCode === 401 || error.statusCode === 429) {
+                    throw error;
+                }
             }
-            lastError = err;
+            lastError = error;
+            if (i < modelChain.length - 1) {
+                console.warn(`[Adhira LLM Fallback] Exception with ${currentModel}: ${error?.message}. Trying fallback ${modelChain[i + 1]}...`);
+                continue;
+            }
         }
     }
-    throw lastError || new ApiError(502, 'Unable to connect to Groq AI provider.', 'AI_PROVIDER_ERROR');
+    console.error('[Adhira LLM Exhausted]', lastError);
+    throw new ApiError(502, 'Adhira is having trouble connecting right now. Please try again in a moment.', 'AI_PROVIDER_ERROR');
 };
 //# sourceMappingURL=groqService.js.map
